@@ -72,22 +72,52 @@ func get_json(path: String) -> Variant:
 	return JSON.parse_string(text)
 
 
+## JSON を POST して応答の JSON を返す (失敗時は null)
+func post_json(path: String, data: Dictionary) -> Variant:
+	var payload := JSON.stringify(data)
+	var text := ""
+	if OS.has_feature("web"):
+		text = await _web_get_text(resolve(path), 15.0, "POST", payload)
+	else:
+		var req := HTTPRequest.new()
+		req.timeout = 15.0
+		add_child(req)
+		var err := req.request(resolve(path), PackedStringArray(["Content-Type: application/json"]),
+			HTTPClient.METHOD_POST, payload)
+		if err != OK:
+			req.queue_free()
+			last_error = "POST %s: %s" % [path, error_string(err)]
+			return null
+		var res: Array = await req.request_completed
+		req.queue_free()
+		if res[0] != HTTPRequest.RESULT_SUCCESS or res[1] != 200:
+			last_error = "POST %s failed (result=%d, http=%d)" % [path, res[0], res[1]]
+			push_warning(last_error)
+			return null
+		text = res[3].get_string_from_utf8()
+	return JSON.parse_string(text) if text != "" else null
+
+
 var _js_seq := 0
 
 
 ## Web 版の JSON 取得はブラウザの fetch を直接使う。
 ## Railway などの中継サーバーが JSON を gzip 圧縮すると、ブラウザが解凍済みのデータを Godot の HTTPRequest が
 ## もう一度解凍しようとして失敗する (result=8 BODY_DECOMPRESS_FAILED) ため。
-func _web_get_text(url: String, timeout: float) -> String:
+func _web_get_text(url: String, timeout: float, method: String = "GET", body: String = "") -> String:
 	_js_seq += 1
 	var key := JSON.stringify("r%d" % _js_seq)
+	var opts := {"cache": "no-store", "method": method}
+	if method != "GET":
+		opts["headers"] = {"Content-Type": "application/json"}
+		opts["body"] = body
 	JavaScriptBridge.eval("""(function(){
 		window.__og = window.__og || {};
 		var k = %s;
-		fetch(%s, {cache: 'no-store'})
+		fetch(%s, %s)
 			.then(function(r){ return r.text().then(function(t){ window.__og[k] = {s: r.status, t: t}; }); })
 			.catch(function(e){ window.__og[k] = {s: 0, t: String(e)}; });
-	})()""" % [key, JSON.stringify(url)], true)
+	})()""" % [key, JSON.stringify(url), JSON.stringify(opts)], true)
 	var deadline := Time.get_ticks_msec() + int(timeout * 1000.0)
 	while Time.get_ticks_msec() < deadline:
 		await get_tree().process_frame

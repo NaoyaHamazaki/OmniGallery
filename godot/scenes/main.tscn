@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/api_client.gd" id="1_api"]
 [ext_resource type="Script" path="res://scripts/ui.gd" id="2_ui"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://scripts/outdoor.gd" id="7_outdoor"]
 [ext_resource type="Script" path="res://scripts/audio.gd" id="8_audio"]
 [ext_resource type="FontFile" path="res://fonts/EBGaramond.ttf" id="9_body"]
+[ext_resource type="Script" path="res://scripts/time_attack.gd" id="10_ta"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]
 sky_top_color = Color(0.24, 0.36, 0.6, 1)
@@ -161,3 +162,7 @@ far = 200.0
 [node name="GalleryManager" type="Node3D" parent="."]
 unique_name_in_owner = true
 script = ExtResource("6_gallery")
+
+[node name="TimeAttack" type="Node3D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("10_ta")

@@ -79,6 +79,11 @@ var _exit_button: Button
 var _help_text := ""
 
 
+func set_exit_label(text: String) -> void:
+	if _exit_button:
+		_exit_button.text = "  %s  " % text
+
+
 ## タクシー運転中の表示 (降りるボタン。スマホでも押せるように画面右下)
 func set_driving(on: bool) -> void:
 	var help: Label = get_node_or_null("%Help")
@@ -196,6 +201,58 @@ func _build_mute() -> void:
 		if audio:
 			set_muted(audio.toggle_mute()))
 	add_child(_mute_button)
+	# フルスクリーン切り替え・終了
+	var fs := _mute_button.duplicate(0) as Button  # 0 = シグナル接続は複製しない
+	fs.text = "FULLSCREEN"
+	fs.offset_top = 70
+	fs.offset_bottom = 96
+	fs.pressed.connect(toggle_fullscreen)
+	add_child(fs)
+	var quit := _mute_button.duplicate(0) as Button
+	quit.text = "EXIT"
+	quit.offset_top = 96
+	quit.offset_bottom = 122
+	quit.pressed.connect(confirm_quit)
+	add_child(quit)
+
+
+func toggle_fullscreen() -> void:
+	var fullscreen := DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if fullscreen else DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+
+## 終了の確認 → Web はお別れページへ (ブラウザのタブはスクリプトから閉じられないため)、デスクトップはアプリ終了
+func confirm_quit() -> void:
+	var box := VBoxContainer.new()
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 24)
+	var msg := Label.new()
+	msg.text = "Thank you for visiting.\nDo you want to leave the museum?"
+	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	msg.add_theme_font_size_override("font_size", 26)
+	box.add_child(msg)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 24)
+	for item in [["LEAVE", _quit], ["STAY", close_modal]]:
+		var b := Button.new()
+		b.text = "   %s   " % item[0]
+		b.add_theme_font_override("font", GalleryFonts.title())
+		b.add_theme_font_size_override("font_size", 22)
+		b.pressed.connect(item[1])
+		row.add_child(b)
+	box.add_child(row)
+	show_custom("Exit", box)
+
+
+func _quit() -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("""
+			if (document.fullscreenElement) { document.exitFullscreen().catch(function(){}); }
+			window.location.href = '/bye';
+		""", true)
+	else:
+		get_tree().quit()
 
 
 # ---------------------------------------------------------------------------

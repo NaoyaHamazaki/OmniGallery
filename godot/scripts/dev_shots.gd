@@ -93,12 +93,56 @@ func run_selftest(gm: Node) -> void:
 	# 6. 外壁を抜けない
 	await _walk(p, Vector3(-12.0, 0.05, -5.0), PI / 2.0, 3.0)
 	results.append(["outer wall blocks", p.global_position.x > Building.X_MIN, p.global_position])
+	# 7. タイムアタック: ゲートからコースへ → 自動運転で 1 周 → ランキング登録 → 美術館へ戻る
+	var ta: TimeAttack = gm.get_node("%TimeAttack")
+	taxi._enter()
+	taxi.teleport(Vector3(Outdoor.GATE_X, Outdoor.GROUND_Y + 0.05, Outdoor.LOT_Z - 3.0), PI)  # 南 (ゲート) を向く
+	Input.action_press("move_forward")
+	var waited := 0.0
+	while not ta.active and waited < 8.0:
+		await _wait(0.25)
+		waited += 0.25
+	Input.action_release("move_forward")
+	results.append(["gate opens and leads to the course", ta.active, taxi.global_position])
+	while ta.state != TimeAttack.State.RUNNING and waited < 15.0:
+		await _wait(0.1)
+		waited += 0.1
+	var lap_start := Time.get_ticks_msec()
+	while ta.state == TimeAttack.State.RUNNING and Time.get_ticks_msec() - lap_start < 240000:
+		await get_tree().physics_frame
+		taxi.ai_input = _autopilot(taxi, ta)
+	taxi.ai_input = Vector2.ZERO
+	results.append(["lap finished (%.1f s, target ~90 s)" % (ta.last_ms / 1000.0), ta.state == TimeAttack.State.FINISHED, taxi.global_position])
+	await _wait(3.0)
+	ta._name = [3, 4, 21]  # "DEV"
+	await ta._submit()
+	results.append(["ranking saved (rank %d)" % ta.last_rank, ta.last_rank >= 1, Vector3.ZERO])
+	await ta.exit_course()
+	results.append(["back to museum parking", not ta.active and taxi.global_position.z < Outdoor.LOT_Z, taxi.global_position])
+	taxi.leave()
+	taxi.teleport(start, 0.0)
+
 	var ok := true
 	for r in results:
 		print("[selftest] %s  %s  pos=%s" % ["PASS" if r[1] else "FAIL", r[0], r[2]])
 		ok = ok and r[1]
 	print("[selftest] RESULT: %s" % ("ALL PASS" if ok else "FAILED"))
 	get_tree().quit(0 if ok else 1)
+
+
+## 次のチェックポイントへ向かう簡易自動運転 (戻り値はスティック入力と同じ形式)
+func _autopilot(taxi: Taxi, ta: TimeAttack) -> Vector2:
+	var idx := ta._next_cp if ta._next_cp < TimeAttack.ROUTE.size() else 0
+	var target: Vector2 = TimeAttack.ROUTE[idx]
+	var p := Vector2(taxi.global_position.x - TimeAttack.ORIGIN.x, taxi.global_position.z - TimeAttack.ORIGIN.z)
+	var to := (target - p).normalized()
+	var yaw := taxi.rotation.y
+	var fwd := Vector2(-sin(yaw), -cos(yaw))
+	var left := Vector2(-cos(yaw), sin(yaw))  # yaw が増える (= 左に曲がる) 方向
+	var ang := atan2(to.dot(left), to.dot(fwd))
+	var steer := clampf(ang * 2.5, -1.0, 1.0)
+	var throttle := 1.0 if absf(ang) < 0.35 else 0.45
+	return Vector2(-steer, -throttle)
 
 
 func _walk(p: CharacterBody3D, start: Vector3, yaw: float, seconds: float) -> void:
@@ -140,6 +184,22 @@ func run(gm: Node) -> void:
 			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)])
 		_save(v[0])
+	# タイムアタックのコース
+	player.set_physics_process(true)
+	var taxi: Taxi = gm.outdoor.get_node("Taxi")
+	var ta: TimeAttack = gm.get_node("%TimeAttack")
+	taxi._enter()
+	await ta.enter()
+	await _wait(1.5)
+	_save("15_course_countdown")
+	await _wait(2.5)
+	taxi.ai_input = Vector2(0, -1)
+	await _wait(2.0)
+	taxi.ai_input = Vector2.ZERO
+	_save("16_course_driving")
+	await ta.exit_course()
+	taxi.leave()
+	player.set_physics_process(false)
 	# モーダル (作品説明・フロアマップ・デバッグ情報)
 	var b: Building = gm.building
 	for c in gm.find_children("Painting_starry-night", "", false, false):

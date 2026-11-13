@@ -17,6 +17,12 @@ const WHEEL_R := 0.34
 
 var driving := false
 var speed := 0.0
+## タイムアタックのカウントダウン中・ゴール後は操作できない
+var locked := false
+## コース外 (芝生) では速度を制限する
+var speed_cap := MAX_SPEED
+## 開発用の自動運転入力 (dev_shots.gd のテストで使用)
+var ai_input := Vector2.ZERO
 var _steer := 0.0
 var _spins: Array[Node3D] = []
 var _front: Array[Node3D] = []
@@ -151,8 +157,24 @@ func _enter() -> void:
 		_audio.play_at("door", global_position, -12.0)
 
 
+## 指定位置へ瞬間移動 (タイムアタックのコースとの行き来)
+func teleport(pos: Vector3, yaw: float) -> void:
+	global_position = pos
+	rotation = Vector3(0, yaw, 0)
+	speed = 0.0
+	_steer = 0.0
+	velocity = Vector3.ZERO
+	_cam.global_position = global_position + global_transform.basis.z * 6.5 + Vector3.UP * 2.6
+	_cam.look_at(global_position + Vector3.UP, Vector3.UP)
+
+
 func leave() -> void:
 	if not driving:
+		return
+	# タイムアタック中は「降りる」= 美術館の駐車場に戻る
+	var ta: TimeAttack = get_tree().current_scene.get_node_or_null("%TimeAttack")
+	if ta and ta.active:
+		ta.exit_course()
 		return
 	driving = false
 	speed = 0.0
@@ -166,19 +188,26 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= _gravity * delta
 	var throttle := 0.0
 	var steer := 0.0
-	if driving and not (_ui and _ui.is_modal_open()):
+	if driving and not locked and not (_ui and _ui.is_modal_open()):
 		var v := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 		var touch: TouchControls = _ui.touch_controls if _ui else null
 		if touch and touch.move_vector != Vector2.ZERO:
 			v = touch.move_vector
+		if ai_input != Vector2.ZERO:
+			v = ai_input
 		throttle = -v.y
 		steer = -v.x
+	if locked:
+		throttle = 0.0
+		speed = move_toward(speed, 0.0, BRAKE * delta)
 	if throttle > 0.05:
 		speed = move_toward(speed, 0.0, BRAKE * delta) if speed < 0.0 else move_toward(speed, MAX_SPEED * throttle, ACCEL * delta)
 	elif throttle < -0.05:
 		speed = move_toward(speed, 0.0, BRAKE * delta) if speed > 0.0 else move_toward(speed, -REVERSE_SPEED, ACCEL * delta)
 	else:
 		speed = move_toward(speed, 0.0, DRAG * delta)
+	if speed > speed_cap:
+		speed = move_toward(speed, speed_cap, BRAKE * delta)
 	_steer = lerpf(_steer, steer * STEER_MAX, clampf(6.0 * delta, 0.0, 1.0))
 	rotation.y += speed / WHEELBASE * tan(_steer) * delta
 	var fwd := -global_transform.basis.z

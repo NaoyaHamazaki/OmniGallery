@@ -36,6 +36,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 # Windows ではレジストリ次第で MIME が正しく返らず Web ビルドが起動しないことがあるため明示登録
 mimetypes.add_type("application/wasm", ".wasm")
@@ -211,6 +212,14 @@ CREATE TABLE IF NOT EXISTS artworks (
     status TEXT NOT NULL DEFAULT 'published',
     created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS rankings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    course TEXT NOT NULL DEFAULT 'driving-school',
+    name TEXT NOT NULL CHECK (length(name) = 3),
+    time_ms INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_rankings_course_time ON rankings (course, time_ms);
 """
 
 
@@ -271,7 +280,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title=APP_NAME, version=APP_VERSION, lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["GET"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_methods=["GET", "POST"], allow_headers=["*"])
 
 
 @app.middleware("http")
@@ -315,6 +324,51 @@ def list_artworks(request: Request) -> dict:
             item["display_size"] = r["display_size"] or 1.0
         items.append(item)
     return {"artworks": items}
+
+
+# ---------------------------------------------------------------------------
+# タイムアタックのランキング (タクシーのイースターエッグ)
+# ---------------------------------------------------------------------------
+RANKING_SIZE = 10
+COURSE_ID = "driving-school"
+
+
+class RankingIn(BaseModel):
+    name: str = Field(pattern=r"^[A-Z]{3}$", description="アルファベット大文字 3 文字")
+    time_ms: int = Field(ge=20_000, le=600_000, description="ラップタイム (ミリ秒)")
+
+
+def _top_rankings(conn: sqlite3.Connection) -> list[dict]:
+    rows = conn.execute(
+        "SELECT name, time_ms, created_at FROM rankings WHERE course = ? ORDER BY time_ms, id LIMIT ?",
+        (COURSE_ID, RANKING_SIZE),
+    ).fetchall()
+    return [{"rank": i + 1, "name": r["name"], "time_ms": r["time_ms"], "created_at": r["created_at"]}
+            for i, r in enumerate(rows)]
+
+
+@app.get("/api/rankings")
+def get_rankings() -> dict:
+    with closing(db()) as conn:
+        top = _top_rankings(conn)
+    # この時間より速ければランクイン (10 件未満なら誰でも入れる)
+    qualify = top[-1]["time_ms"] if len(top) >= RANKING_SIZE else None
+    return {"course": COURSE_ID, "size": RANKING_SIZE, "rankings": top, "qualify_ms": qualify}
+
+
+@app.post("/api/rankings")
+def post_ranking(entry: RankingIn) -> dict:
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with closing(db()) as conn, conn:
+        cur = conn.execute("INSERT INTO rankings (course, name, time_ms, created_at) VALUES (?, ?, ?, ?)",
+                           (COURSE_ID, entry.name, entry.time_ms, now))
+        new_id = cur.lastrowid
+        rank = conn.execute(
+            "SELECT COUNT(*) FROM rankings WHERE course = ? AND (time_ms < ? OR (time_ms = ? AND id < ?))",
+            (COURSE_ID, entry.time_ms, entry.time_ms, new_id),
+        ).fetchone()[0] + 1
+        top = _top_rankings(conn)
+    return {"rank": rank, "in_top": rank <= RANKING_SIZE, "rankings": top}
 
 
 DEBUG_ROW_LIMIT = 200
@@ -485,6 +539,29 @@ def game_file(path: str, request: Request):
     if request.headers.get("if-none-match") == etag:
         return Response(status_code=304, headers=headers)
     return FileResponse(file, media_type=media, headers=headers)
+
+
+@app.get("/bye", include_in_schema=False)
+def bye():
+    """ゲーム内の EXIT から移動するお別れページ (ブラウザのタブはスクリプトから閉じられないため)。"""
+    return HTMLResponse(
+        """<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>OmniGallery</title><link rel="icon" href="/favicon.ico">
+        <style>
+        @font-face{font-family:Cinzel;src:url('/static/brand/fonts/Cinzel.ttf')}
+        body{margin:0;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+             background:radial-gradient(ellipse at 50% 40%,#2b3247,#1f2433 55%,#151824);color:#ece6da;
+             font-family:Cinzel,Georgia,serif;text-align:center}
+        img{width:64px;height:64px}
+        h1{font-weight:400;letter-spacing:.15em;font-size:24px;margin:8px 0 0}
+        p{color:#9a96a0;letter-spacing:.1em;font-size:13px;margin:0}
+        a{margin-top:18px;color:#1f2433;background:#c9a45c;padding:10px 26px;border-radius:6px;text-decoration:none;letter-spacing:.15em}
+        </style>
+        <img src="/static/brand/icon-512.png" alt="">
+        <h1>THANK YOU FOR VISITING</h1>
+        <p>ご来館ありがとうございました</p>
+        <a href="/game/">ENTER AGAIN</a>"""
+    )
 
 
 @app.get("/favicon.ico", include_in_schema=False)

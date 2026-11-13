@@ -84,6 +84,9 @@ func _cull_far_side() -> void:
 func _update_zone(force: bool) -> void:
 	var outside := Outdoor.is_outdoor(player.global_position)
 	var text := "ENTRANCE PLAZA" if outside else str(building.floor_titles[Building.floor_of(player.global_position.y)])
+	var ta: TimeAttack = get_node_or_null("%TimeAttack")
+	if ta and ta.active:
+		text = "TIME ATTACK"
 	if text != _zone or force:
 		_zone = text
 		ui.set_floor(text)

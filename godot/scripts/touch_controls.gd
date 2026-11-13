@@ -129,24 +129,9 @@ func _install_web_mobile_helpers() -> void:
 		document.head.appendChild(style);
 		var overlay = document.createElement('div');
 		overlay.id = 'omni-rotate';
-		overlay.innerHTML = '&#x1F4F1;&#x21BB;<br>画面を横向きにしてください<br><small>タップで全画面になります</small>';
+		overlay.innerHTML = '&#x1F4F1;&#x21BB;<br>画面を横向きにしてください';
 		document.body.appendChild(overlay);
-
-		function goFullscreenLandscape() {
-			var el = document.documentElement;
-			var req = el.requestFullscreen || el.webkitRequestFullscreen;
-			var lock = function () {
-				if (screen.orientation && screen.orientation.lock) {
-					screen.orientation.lock('landscape').catch(function () {});
-				}
-			};
-			if (!(document.fullscreenElement || document.webkitFullscreenElement) && req) {
-				var p = req.call(el, { navigationUI: 'hide' });
-				if (p && p.then) { p.then(lock).catch(function () {}); } else { lock(); }
-			} else {
-				lock();
-			}
-		}
-		document.addEventListener('touchend', goFullscreenLandscape, { passive: true });
+		// 全画面化・横画面固定は web_shell.html が最初のタップで行う (ここで毎回要求すると、
+		// FULLSCREEN ボタンで全画面を解除しても次のタップで戻ってしまうため)
 	})();
 	""", true)
