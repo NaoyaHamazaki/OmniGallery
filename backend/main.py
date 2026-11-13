@@ -282,6 +282,10 @@ async def count_and_cache(request: Request, call_next):
     # ゲーム本体は再エクスポートで中身が変わるので、毎回 ETag で更新確認させる (未変更なら 304)
     if path.startswith("/game/"):
         response.headers["Cache-Control"] = "no-cache"
+    elif path.startswith("/api/"):
+        # 中継サーバー (Railway のエッジ) で勝手に圧縮させない。
+        # 圧縮されると Godot Web 版の HTTPRequest が二重に解凍しようとして失敗する
+        response.headers["Cache-Control"] = "no-store, no-transform"
     return response
 
 

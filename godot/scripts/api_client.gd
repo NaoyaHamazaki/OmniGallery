@@ -60,11 +60,49 @@ func get_bytes(path: String, timeout: float = 60.0) -> PackedByteArray:
 
 func get_json(path: String) -> Variant:
 	var started := Time.get_ticks_msec()
-	var body := await get_bytes(path, 15.0)
-	if body.is_empty():
+	var text := ""
+	if OS.has_feature("web"):
+		text = await _web_get_text(resolve(path), 15.0)
+	else:
+		var body := await get_bytes(path, 15.0)
+		text = body.get_string_from_utf8()
+	if text.is_empty():
 		return null
 	last_latency_ms = Time.get_ticks_msec() - started
-	return JSON.parse_string(body.get_string_from_utf8())
+	return JSON.parse_string(text)
+
+
+var _js_seq := 0
+
+
+## Web 版の JSON 取得はブラウザの fetch を直接使う。
+## Railway などの中継サーバーが JSON を gzip 圧縮すると、ブラウザが解凍済みのデータを Godot の HTTPRequest が
+## もう一度解凍しようとして失敗する (result=8 BODY_DECOMPRESS_FAILED) ため。
+func _web_get_text(url: String, timeout: float) -> String:
+	_js_seq += 1
+	var key := JSON.stringify("r%d" % _js_seq)
+	JavaScriptBridge.eval("""(function(){
+		window.__og = window.__og || {};
+		var k = %s;
+		fetch(%s, {cache: 'no-store'})
+			.then(function(r){ return r.text().then(function(t){ window.__og[k] = {s: r.status, t: t}; }); })
+			.catch(function(e){ window.__og[k] = {s: 0, t: String(e)}; });
+	})()""" % [key, JSON.stringify(url)], true)
+	var deadline := Time.get_ticks_msec() + int(timeout * 1000.0)
+	while Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+		var status = JavaScriptBridge.eval("window.__og[%s] ? window.__og[%s].s : -1" % [key, key], true)
+		if status == null or float(status) < 0.0:
+			continue
+		var text = JavaScriptBridge.eval("window.__og[%s].t" % key, true)
+		JavaScriptBridge.eval("delete window.__og[%s]" % key, true)
+		if int(status) != 200:
+			last_error = "GET %s failed (http=%d) %s" % [url, int(status), str(text).left(120)]
+			push_warning(last_error)
+			return ""
+		return str(text)
+	last_error = "GET %s timed out" % url
+	return ""
 
 
 var _last_decode_frame := -1
