@@ -114,7 +114,8 @@ func build(b: Building, player: Node, ui: GalleryUI, audio: GalleryAudio) -> voi
 	cs.position.y = 0.75  # 箱の底 = タイヤの接地面
 	add_child(cs)
 	# クリック判定 (衝突はしない専用レイヤー)
-	var hit := Interact.add_box(self, Vector3(2.0, 1.9, 4.6), Vector3(0, 0.95, 0), "Drive the taxi", _enter)
+	# 隠し要素なので照準を合わせても案内は出さない (クリック/タップすると乗れる)
+	var hit := Interact.add_box(self, Vector3(2.0, 1.9, 4.6), Vector3(0, 0.95, 0), "", _enter)
 	hit.collision_layer = INTERACT_LAYER
 	hit.collision_mask = 0
 
@@ -148,8 +149,6 @@ func _enter() -> void:
 	_cam.current = true
 	if _audio:
 		_audio.play_at("door", global_position, -12.0)
-	if _ui:
-		_ui.set_status("Easter egg! Drive with W/S + A/D (stick on mobile).  E: get out", 6.0)
 
 
 func leave() -> void:

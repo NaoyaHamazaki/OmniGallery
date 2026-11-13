@@ -39,6 +39,9 @@ func resolve(path: String) -> String:
 func get_bytes(path: String, timeout: float = 60.0) -> PackedByteArray:
 	var req := HTTPRequest.new()
 	req.timeout = timeout
+	# Web 版はブラウザ (fetch) が gzip/br を自動で解凍済み。Godot 側でも解凍しようとすると
+	# Railway などの経路で圧縮された応答が result=8 (BODY_DECOMPRESS_FAILED) になるので無効にする
+	req.accept_gzip = not OS.has_feature("web")
 	add_child(req)
 	var err := req.request(resolve(path))
 	if err != OK:
