@@ -1,7 +1,10 @@
-"""Blender の .blend を展示用の glb (オリジナル版 + 軽量版) に変換する。
+"""3D データを展示用の glb (オリジナル版 + 軽量版) に変換する (Blender の中で実行)。
+.blend はそのまま開き、それ以外 (glb / gltf / fbx / obj / stl / ply / usd) は --import で読み込む。
+通常は tools/convert_media.py から呼ばれる。
 
 Blender の中で実行する (UGC 投稿の自動変換にも流用する想定):
     blender.exe -b data/xxx.blend --python tools/convert_blend.py -- <出力先フォルダ> <名前> [軽量版の目標三角形数] [除外するオブジェクト名,...]
+    blender.exe -b --python tools/convert_blend.py -- <出力先> <名前> 60000 "" --import data/model.fbx
 
 出力:
     <name>.glb        オリジナル版 (モディファイアを適用しただけ。高品質表示用)
@@ -18,8 +21,35 @@ import bpy
 LITE_TEXTURE_MAX = 1024
 
 
+IMPORTERS = {  # 拡張子 → 読み込み処理 (Blender 5.x)
+    ".glb": lambda p: bpy.ops.import_scene.gltf(filepath=p),
+    ".gltf": lambda p: bpy.ops.import_scene.gltf(filepath=p),
+    ".fbx": lambda p: bpy.ops.import_scene.fbx(filepath=p),
+    ".obj": lambda p: bpy.ops.wm.obj_import(filepath=p),
+    ".stl": lambda p: bpy.ops.wm.stl_import(filepath=p),
+    ".ply": lambda p: bpy.ops.wm.ply_import(filepath=p),
+    ".usd": lambda p: bpy.ops.wm.usd_import(filepath=p),
+    ".usda": lambda p: bpy.ops.wm.usd_import(filepath=p),
+    ".usdc": lambda p: bpy.ops.wm.usd_import(filepath=p),
+    ".usdz": lambda p: bpy.ops.wm.usd_import(filepath=p),
+}
+
+
+def import_if_requested(argv: list) -> None:
+    if "--import" not in argv:
+        return
+    src = Path(argv[argv.index("--import") + 1])
+    importer = IMPORTERS.get(src.suffix.lower())
+    if importer is None:
+        raise SystemExit(f"unsupported 3D format: {src.suffix}")
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    importer(str(src))
+
+
 def args():
     a = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
+    if "--import" in a:
+        a = a[:a.index("--import")]
     out = Path(a[0]) if a else Path.cwd()
     name = a[1] if len(a) > 1 else Path(bpy.data.filepath).stem
     target = int(a[2]) if len(a) > 2 else 60000
@@ -192,12 +222,13 @@ def export(path: Path, lite: bool) -> None:
 
 def main():
     global EXCLUDE, STATIC
+    import_if_requested(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
     out, name, target, EXCLUDE = args()
     STATIC = is_static_pose()
     out.mkdir(parents=True, exist_ok=True)
     objs = mesh_objects()
     report = {
-        "source": Path(bpy.data.filepath).name,
+        "source": Path(bpy.data.filepath).name or "(imported)",
         "blender": bpy.app.version_string,
         "objects": [{"name": o.name, "type": o.type} for o in bpy.context.scene.objects if o.visible_get()],
         "mesh_count": len(objs),

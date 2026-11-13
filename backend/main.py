@@ -43,6 +43,7 @@ mimetypes.add_type("application/wasm", ".wasm")
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("model/gltf-binary", ".glb")
 mimetypes.add_type("application/manifest+json", ".webmanifest")
+mimetypes.add_type("video/ogg", ".ogv")
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -55,6 +56,7 @@ BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 ARTWORK_DIR = STATIC_DIR / "artworks"
 MODEL_DIR = STATIC_DIR / "models"
+VIDEO_DIR = STATIC_DIR / "videos"
 TEXTURE_DIR = STATIC_DIR / "textures"
 BRAND_DIR = STATIC_DIR / "brand"
 DB_PATH = BASE_DIR / "data" / "omnigallery.db"
@@ -119,6 +121,15 @@ SEED_ARTWORKS: list[dict] = [
                     "a lightweight version is shown by default and the original can be loaded on request.",
      "file": "irobny_lite.glb", "hq_file": "irobny.glb", "remote": None,
      "credit": "Local test file - not for public deployment"},
+    # 投稿のお試し展示 (スマホの写真・動画を tools/convert_media.py で変換したもの)
+    {"id": "local-photo-01", "kind": "painting", "media": "image", "floor": 1, "light_kelvin": 5000,
+     "title": "Photo Test 01", "artist": "Test upload", "year": 2026,
+     "description": "A smartphone photo (HEIC) converted to JPEG with location and other metadata removed.",
+     "file": "local_photo_01.jpg", "remote": None, "credit": "Test upload - photo by the OmniGallery team"},
+    {"id": "local-video-01", "kind": "painting", "media": "video", "floor": 1, "light_kelvin": 5000,
+     "title": "Video Test 01", "artist": "Test upload", "year": 2026,
+     "description": "A smartphone video (HEVC .MOV) converted to Ogg Theora for the web, looping without sound.",
+     "file": "local_video_01.ogv", "remote": None, "credit": "Test upload - video by the OmniGallery team"},
     # ---- 2F ----
     {"id": "great-wave", "kind": "painting", "floor": 2, "featured": 1, "light_kelvin": 3000,
      "title": "The Great Wave off Kanagawa", "artist": "Katsushika Hokusai", "year": 1831,
@@ -218,6 +229,7 @@ CREATE TABLE IF NOT EXISTS artworks (
     light_kelvin INTEGER NOT NULL DEFAULT 3000,
     display_size REAL,
     hq_file TEXT,
+    media TEXT NOT NULL DEFAULT 'image',
     sort_order INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'published',
     created_at TEXT NOT NULL
@@ -247,6 +259,8 @@ def init_db() -> None:
         cols = [c[1] for c in conn.execute("PRAGMA table_info(artworks)")]
         if "hq_file" not in cols:  # 既存の DB に列を追加
             conn.execute("ALTER TABLE artworks ADD COLUMN hq_file TEXT")
+        if "media" not in cols:
+            conn.execute("ALTER TABLE artworks ADD COLUMN media TEXT NOT NULL DEFAULT 'image'")
         conn.executemany(
             "INSERT INTO floors (id, name, title, description) VALUES (:id, :name, :title, :description) "
             "ON CONFLICT(id) DO UPDATE SET name=excluded.name, title=excluded.title, description=excluded.description",
@@ -262,25 +276,31 @@ def init_db() -> None:
                 (WIKI + a["remote"].replace(" ", "_")) if painting else KHRONOS + a["remote"],
                 "credit": a.get("credit", PD_CREDIT), "floor": a["floor"], "featured": a.get("featured", 0),
                 "light_kelvin": a["light_kelvin"], "display_size": a.get("display_size"),
-                "hq_file": a.get("hq_file"),
+                "hq_file": a.get("hq_file"), "media": a.get("media", "image"),
                 "sort_order": i, "created_at": now,
             })
         # シード作品は毎回最新の定義で上書き (UGC 投稿分は影響を受けない)
         conn.executemany(
             "INSERT INTO artworks (id, kind, title, artist, year, description, file, source_url, credit, floor, "
-            "featured, light_kelvin, display_size, hq_file, sort_order, created_at) VALUES (:id, :kind, :title, :artist, "
-            ":year, :description, :file, :source_url, :credit, :floor, :featured, :light_kelvin, :display_size, :hq_file, "
+            "featured, light_kelvin, display_size, hq_file, media, sort_order, created_at) VALUES (:id, :kind, :title, :artist, "
+            ":year, :description, :file, :source_url, :credit, :floor, :featured, :light_kelvin, :display_size, :hq_file, :media, "
             ":sort_order, :created_at) ON CONFLICT(id) DO UPDATE SET kind=excluded.kind, title=excluded.title, "
             "artist=excluded.artist, year=excluded.year, description=excluded.description, file=excluded.file, "
             "source_url=excluded.source_url, credit=excluded.credit, floor=excluded.floor, "
             "featured=excluded.featured, light_kelvin=excluded.light_kelvin, display_size=excluded.display_size, "
-            "hq_file=excluded.hq_file, sort_order=excluded.sort_order",
+            "hq_file=excluded.hq_file, media=excluded.media, sort_order=excluded.sort_order",
             rows,
         )
 
 
-def _asset_path(kind: str, file: str) -> Path:
-    return (ARTWORK_DIR if kind == "painting" else MODEL_DIR) / file
+def _asset_dir(kind: str, media: str = "image") -> Path:
+    if media == "video":
+        return VIDEO_DIR
+    return ARTWORK_DIR if kind == "painting" else MODEL_DIR
+
+
+def _asset_path(kind: str, file: str, media: str = "image") -> Path:
+    return _asset_dir(kind, media) / file
 
 
 # ---------------------------------------------------------------------------
@@ -328,12 +348,13 @@ def list_artworks(request: Request) -> dict:
         ).fetchall()
     items = []
     for r in rows:
-        if not _asset_path(r["kind"], r["file"]).exists():
+        if not _asset_path(r["kind"], r["file"], r["media"]).exists():
             continue
-        mount = "artworks" if r["kind"] == "painting" else "models"
+        mount = "videos" if r["media"] == "video" else ("artworks" if r["kind"] == "painting" else "models")
         item = {k: r[k] for k in ("id", "kind", "title", "artist", "year", "description", "source_url", "credit",
                                   "floor", "light_kelvin")}
         item["featured"] = bool(r["featured"])
+        item["media"] = r["media"]
         item["url"] = str(request.url_for(mount, path=r["file"]))
         if r["kind"] == "model":
             item["display_size"] = r["display_size"] or 1.0
@@ -438,7 +459,7 @@ def debug_info() -> dict:
         "database": {"engine": "SQLite", "file": DB_PATH.name,
                      "size_kb": round(DB_PATH.stat().st_size / 1024, 1) if DB_PATH.exists() else 0,
                      "tables": tables, "artworks_by_kind": by_kind, "artworks_by_floor": by_floor},
-        "storage": {"artworks": _dir_stats(ARTWORK_DIR), "models": _dir_stats(MODEL_DIR),
+        "storage": {"artworks": _dir_stats(ARTWORK_DIR), "models": _dir_stats(MODEL_DIR), "videos": _dir_stats(VIDEO_DIR),
                     "textures": _dir_stats(TEXTURE_DIR)},
         "web_build": {
             "present": index.exists(),
@@ -594,10 +615,11 @@ def favicon():
     return FileResponse(BRAND_DIR / "favicon.ico")
 
 
-for _d in (ARTWORK_DIR, MODEL_DIR, TEXTURE_DIR, BRAND_DIR):
+for _d in (ARTWORK_DIR, MODEL_DIR, VIDEO_DIR, TEXTURE_DIR, BRAND_DIR):
     _d.mkdir(parents=True, exist_ok=True)
 app.mount("/static/artworks", StaticFiles(directory=ARTWORK_DIR), name="artworks")
 app.mount("/static/models", StaticFiles(directory=MODEL_DIR), name="models")
+app.mount("/static/videos", StaticFiles(directory=VIDEO_DIR), name="videos")
 app.mount("/static/textures", StaticFiles(directory=TEXTURE_DIR), name="textures")
 app.mount("/static/brand", StaticFiles(directory=BRAND_DIR), name="brand")
 # /game/ 配下は game_index / game_file のルートで配信する (OGP 差し込み・gzip 対応のため)

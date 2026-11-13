@@ -13,6 +13,7 @@ const VIEWS := [
 	["01_entrance_eyestop", Vector3(-3.0, 0.0, 8.3), Vector3(-3.0, 1.9, -10.0)],
 	["01b_ceiling", Vector3(-3.0, 0.0, 3.0), Vector3(-3.0, 5.0, -2.0)],
 	["01c_elevator_cabin", Vector3(12.0, 0.0, -5.6), Vector3(12.0, 0.2, -8.6)],
+	["02c_local_media", Vector3(4.0, 0.0, -3.0), Vector3(8.85, 1.7, -3.0)],
 	["02a_upload_test_lite", Vector3(-6.5, 0.0, 0.5), Vector3(-3.0, 2.0, -3.5)],
 	["02_1f_pedestal", Vector3(-6.8, 0.0, 5.2), Vector3(-9.5, 1.3, 1.0)],
 	["03_1f_west_wall", Vector3(-9.0, 0.0, 0.0), Vector3(-15.0, 1.7, -2.5)],

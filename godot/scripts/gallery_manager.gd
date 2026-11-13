@@ -291,7 +291,52 @@ func _create_painting(art: Dictionary, slot: Dictionary, f: int) -> void:
 	Interact.attach(body, str(art.get("title", "Untitled")), _open_artwork.bind(p))
 	_apply_painting_size(p, 4.0 / 3.0)
 	building.add_map_item(f, _wall_rect(slot, 1.2 if slot["featured"] else 0.8), "featured" if slot["featured"] else "painting")
-	_load_painting_texture(p)
+	if str(art.get("media", "image")) == "video":
+		_load_painting_video(p)
+	else:
+		_load_painting_texture(p)
+
+
+## 映像作品: 動画 (Ogg Theora) をダウンロードして再生し、その映像を額の中に映す (無音でループ)
+func _load_painting_video(p: Dictionary) -> void:
+	var art: Dictionary = p["art"]
+	var body := await api.get_bytes(art.get("url", ""), 180.0)
+	if body.is_empty():
+		_finish_item(p["floor"], false)
+		return
+	# VideoStreamTheora はファイルから読むので、一度 user:// (Web 版はブラウザ内の保存領域) に書き出す
+	var path := "user://video_%s.ogv" % str(art.get("id", "x"))
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	if f == null:
+		_finish_item(p["floor"], false)
+		return
+	f.store_buffer(body)
+	f.close()
+	var stream := VideoStreamTheora.new()
+	stream.file = path
+	var player_node := VideoStreamPlayer.new()
+	player_node.stream = stream
+	player_node.loop = true
+	player_node.volume_db = -80.0  # 展示は無音
+	# 画面には出さず、映像のテクスチャだけを使う (画面外に置き、透明にする)
+	player_node.position = Vector2(-10000, -10000)
+	player_node.modulate.a = 0.0
+	player_node.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui.add_child(player_node)
+	player_node.play()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var tex := player_node.get_video_texture()
+	var mat: StandardMaterial3D = p["material"]
+	mat.albedo_texture = tex
+	mat.albedo_color = Color.WHITE
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED  # 画面のように自ら光って見える
+	p["texture"] = tex
+	if tex and tex.get_width() > 0:
+		_apply_painting_size(p, float(tex.get_width()) / float(tex.get_height()))
+	else:
+		_apply_painting_size(p, 16.0 / 9.0)
+	_finish_item(p["floor"], true)
 
 
 func _wall_rect(slot: Dictionary, half: float) -> Rect2:
