@@ -1,7 +1,7 @@
 """Blender の .blend を展示用の glb (オリジナル版 + 軽量版) に変換する。
 
 Blender の中で実行する (UGC 投稿の自動変換にも流用する想定):
-    blender.exe -b data/xxx.blend --python tools/convert_blend.py -- <出力先フォルダ> <名前> [軽量版の目標三角形数]
+    blender.exe -b data/xxx.blend --python tools/convert_blend.py -- <出力先フォルダ> <名前> [軽量版の目標三角形数] [除外するオブジェクト名,...]
 
 出力:
     <name>.glb        オリジナル版 (モディファイアを適用しただけ。高品質表示用)
@@ -23,11 +23,22 @@ def args():
     out = Path(a[0]) if a else Path.cwd()
     name = a[1] if len(a) > 1 else Path(bpy.data.filepath).stem
     target = int(a[2]) if len(a) > 2 else 60000
-    return out, name, target
+    exclude = set(a[3].split(",")) if len(a) > 3 and a[3] else set()
+    return out, name, target, exclude
+
+
+EXCLUDE: set = set()
+STATIC = False  # True: 骨組みを書き出さず、今のポーズを適用した動かない形で書き出す
+
+
+def is_static_pose() -> bool:
+    """アクションがすべて 1 フレーム以下 (T ポーズなどの静止ポーズだけ) なら、動きのない作品とみなす。"""
+    acts = list(bpy.data.actions)
+    return all(a.frame_range[1] - a.frame_range[0] < 1.0 for a in acts)
 
 
 def mesh_objects():
-    return [o for o in bpy.context.scene.objects if o.type == "MESH" and o.visible_get()]
+    return [o for o in bpy.context.scene.objects if o.type == "MESH" and o.visible_get() and o.name not in EXCLUDE]
 
 
 def count_triangles(objs) -> int:
@@ -47,8 +58,9 @@ def images_info():
 
 def select_exportables() -> None:
     """書き出すのは表示中のメッシュと骨組みだけ (文字・カーブ・空オブジェクト・カメラ等は除外)。"""
+    kinds = {"MESH"} if STATIC else {"MESH", "ARMATURE"}
     for o in bpy.context.scene.objects:
-        o.select_set(o.visible_get() and o.type in {"MESH", "ARMATURE"})
+        o.select_set(o.visible_get() and o.type in kinds and o.name not in EXCLUDE)
 
 
 IMAGE_KEYS = {  # 画像名に含まれる語 → 材質の入力
@@ -167,6 +179,8 @@ def export(path: Path, lite: bool) -> None:
     select_exportables()
     kw = dict(filepath=str(path), export_format="GLB", use_selection=True, export_apply=True,
               export_cameras=False, export_lights=False)
+    if STATIC:  # 骨組みによる変形を適用した形で書き出す (表示位置・大きさが見た目どおりになる)
+        kw.update(export_skins=False, export_animations=False, export_morph=False)
     if lite:
         kw["export_image_format"] = "JPEG"
     try:
@@ -177,7 +191,9 @@ def export(path: Path, lite: bool) -> None:
 
 
 def main():
-    out, name, target = args()
+    global EXCLUDE, STATIC
+    out, name, target, EXCLUDE = args()
+    STATIC = is_static_pose()
     out.mkdir(parents=True, exist_ok=True)
     objs = mesh_objects()
     report = {
@@ -185,6 +201,8 @@ def main():
         "blender": bpy.app.version_string,
         "objects": [{"name": o.name, "type": o.type} for o in bpy.context.scene.objects if o.visible_get()],
         "mesh_count": len(objs),
+        "excluded": sorted(EXCLUDE),
+        "static_pose": STATIC,
         "triangles_original": count_triangles(objs),
         "images": images_info(),
     }

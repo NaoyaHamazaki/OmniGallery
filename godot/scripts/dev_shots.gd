@@ -13,7 +13,7 @@ const VIEWS := [
 	["01_entrance_eyestop", Vector3(-3.0, 0.0, 8.3), Vector3(-3.0, 1.9, -10.0)],
 	["01b_ceiling", Vector3(-3.0, 0.0, 3.0), Vector3(-3.0, 5.0, -2.0)],
 	["01c_elevator_cabin", Vector3(12.0, 0.0, -5.6), Vector3(12.0, 0.2, -8.6)],
-	["02a_upload_test_lite", Vector3(-3.0, 0.0, 6.0), Vector3(-3.0, 2.6, -3.5)],
+	["02a_upload_test_lite", Vector3(-6.5, 0.0, 0.5), Vector3(-3.0, 2.0, -3.5)],
 	["02_1f_pedestal", Vector3(-6.8, 0.0, 5.2), Vector3(-9.5, 1.3, 1.0)],
 	["03_1f_west_wall", Vector3(-9.0, 0.0, 0.0), Vector3(-15.0, 1.7, -2.5)],
 	["04_atrium_ramps", Vector3(9.9, 0.0, 9.4), Vector3(13.5, 2.6, 0.0)],
@@ -197,8 +197,8 @@ func run(gm: Node) -> void:
 		_save(v[0])
 	# 投稿テスト作品: 高品質版に差し替えて同じ視点で撮る
 	if gm._models.has("upload-test-01"):
-		player.global_position = Vector3(-3.0, 0.0, 6.0)
-		var d: Vector3 = Vector3(-3.0, 2.6, -3.5) - (player.global_position + Vector3(0, 1.55, 0))
+		player.global_position = Vector3(-6.5, 0.0, 0.5)
+		var d: Vector3 = Vector3(-3.0, 2.0, -3.5) - (player.global_position + Vector3(0, 1.55, 0))
 		player.rotation.y = atan2(-d.x, -d.z)
 		head.rotation.x = atan2(d.y, Vector2(d.x, d.z).length())
 		await gm._on_ui_action("hq:upload-test-01")
