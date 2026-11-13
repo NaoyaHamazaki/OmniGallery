@@ -654,11 +654,36 @@ func _build_signs() -> void:
 		# 吹き抜け側から見えるフロア名
 		var title_label := _label(floor_titles[f], Vector3(ax, floor_y(f) + 4.2, 2.0), Vector3.RIGHT, 72, 0.008, dark)
 		_floor_signs.append(title_label)
-	var light := Color(0.25, 0.24, 0.22)
-	_label("STAIRS", Vector3((STAIRS_X.x + STAIRS_X.y) / 2.0, 2.6, RAMP_Z_BOTTOM + 1.6), Vector3.BACK, 48, 0.006, light)
-	_label("UP  2F", Vector3((ESC_UP_X.x + ESC_UP_X.y) / 2.0, 2.6, RAMP_Z_BOTTOM + 1.6), Vector3.BACK, 48, 0.006, light)
-	_label("DOWN  1F", Vector3((ESC_DOWN_X.x + ESC_DOWN_X.y) / 2.0, FLOOR_HEIGHT + 2.6, RAMP_Z_TOP - 1.6),
-		Vector3.FORWARD, 48, 0.006, light)
+	# 乗り口の案内は天井から吊り下げたプレート
+	_hanging_sign("STAIRS", Vector3((STAIRS_X.x + STAIRS_X.y) / 2.0, 0.0, RAMP_Z_BOTTOM + 1.6), 0.0)
+	_hanging_sign("UP  2F", Vector3((ESC_UP_X.x + ESC_UP_X.y) / 2.0, 0.0, RAMP_Z_BOTTOM + 1.6), 0.0)
+	_hanging_sign("DOWN  1F", Vector3((ESC_DOWN_X.x + ESC_DOWN_X.y) / 2.0, FLOOR_HEIGHT, RAMP_Z_TOP - 1.6), 0.0)
+
+
+## 天井から 2 本の吊り棒で下がる案内プレート (両面に文字)。pos は床面上の位置
+func _hanging_sign(text: String, pos: Vector3, yaw: float) -> void:
+	var root := Node3D.new()
+	root.position = pos
+	root.rotation.y = yaw
+	add_child(root)
+	var plate_y := 3.1
+	var size := Vector3(1.5, 0.42, 0.05)
+	_box(Vector3(0, plate_y, 0), size, mat_dark, false, root)
+	for x in [-0.6, 0.6]:
+		var top := CEILING_HEIGHT
+		_box(Vector3(x, (plate_y + top) / 2.0, 0), Vector3(0.025, top - plate_y, 0.025), mat_metal, false, root)
+	for face in [1.0, -1.0]:
+		var l := Label3D.new()
+		l.text = text
+		l.font = GalleryFonts.title()
+		l.font_size = 40
+		l.pixel_size = 0.0055
+		l.modulate = Color(0.95, 0.9, 0.8)
+		l.outline_size = 0
+		l.double_sided = false
+		l.position = Vector3(0, plate_y, face * (size.z / 2.0 + 0.003))
+		l.rotation.y = 0.0 if face > 0 else PI
+		root.add_child(l)
 
 
 # ---------------------------------------------------------------------------

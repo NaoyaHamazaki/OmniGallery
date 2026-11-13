@@ -36,7 +36,7 @@ body { color: #ece6da; background: #1f2433; overflow: hidden; touch-action: none
 	position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
 	background: linear-gradient(90deg, #8a6a32, #c9a45c 60%, #ffe2a0);
 	box-shadow: 0 0 10px rgba(255, 210, 130, .7);
-	transition: width .3s ease-out;
+	transition: width .12s linear;
 }
 .fill::after { /* きらっと流れる光 */
 	content: ''; position: absolute; top: 0; bottom: 0; width: 40px; left: -40px;
@@ -133,16 +133,24 @@ const engine = new Engine(GODOT_CONFIG);
 		fail('The following features required to run this app are missing:\n' + missing.join('\n'));
 		return;
 	}
+	// 進捗: ダウンロード = 0〜85%、ダウンロード後のエンジン起動 (wasm のコンパイル等) = 85〜100%
+	let creep = null;
 	engine.startGame({
 		onProgress: function (current, total) {
 			if (current > 0 && total > 0) {
-				setProgress(current / total);
+				const r = Math.min(1, current / total);
+				setProgress(r * 0.85);
+				if (r >= 1 && !creep) {
+					// 起動中は 85% → 98% へゆっくり進める (完了時に 100%)
+					let p = 0.85;
+					creep = setInterval(function () { p += (0.98 - p) * 0.08; setProgress(p); }, 120);
+				}
 			}
 		},
 	}).then(() => {
+		if (creep) clearInterval(creep);
 		setProgress(1);
-		status.classList.add('done');
-		setTimeout(() => status.remove(), 700);
+		setTimeout(() => { status.classList.add('done'); setTimeout(() => status.remove(), 700); }, 250);
 	}, fail);
 }());
 </script>
