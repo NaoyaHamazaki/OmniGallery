@@ -110,11 +110,11 @@ def make_sfx() -> None:
     buf = [0.0] * int(0.5 * RATE)
     bell(buf, 0.0, note("D5"), 0.5, 0.18, 0.5)
     save("ui_close", buf, 0.35)
-    # エレベーター到着: ポーン
-    buf = [0.0] * int(2.0 * RATE)
-    bell(buf, 0.0, note("E6"), 0.5, 0.8, 2.0)
-    bell(buf, 0.45, note("C6"), 0.5, 0.9, 1.5)
-    save("ding", buf, 0.5)
+    # エレベーター到着: ポーン (低めでやわらかく)
+    buf = [0.0] * int(2.2 * RATE)
+    bell(buf, 0.0, note("E4"), 0.5, 0.7, 2.2)
+    bell(buf, 0.5, note("C4"), 0.5, 0.8, 1.7)
+    save("ding", lowpass(buf, 0.3), 0.4)
     # 自動ドア: こもったスライド音
     n = int(1.1 * RATE)
     door = []

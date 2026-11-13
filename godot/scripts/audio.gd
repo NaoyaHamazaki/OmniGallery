@@ -5,7 +5,7 @@ extends Node
 ##   効果音: 足音・モーダル開閉・エレベーター到着・自動ドア
 ## ブラウザは最初のクリック/タップまで音を出せないが、Godot が自動で再開するのでそのまま再生してよい。
 
-const BGM_INDOOR_DB := -12.0
+const BGM_INDOOR_DB := -19.0
 const BGM_OUTDOOR_DB := -80.0  # 屋外では BGM は聞こえない (館内に入るとフェードイン)
 
 var muted := false

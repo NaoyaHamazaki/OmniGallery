@@ -171,7 +171,7 @@ func _physics_process(delta: float) -> void:
 				current_floor = target_floor
 				state = State.IDLE
 				if audio:
-					audio.play_at("ding", _cabin.global_position + Vector3(0, 2.2, 1.0), -6.0)
+					audio.play_at("ding", _cabin.global_position + Vector3(0, 2.2, 1.0), -11.0)
 	_update_indicators()
 
 

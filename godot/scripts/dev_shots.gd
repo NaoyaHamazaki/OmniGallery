@@ -103,7 +103,7 @@ func run_selftest(gm: Node) -> void:
 		await _wait(0.25)
 		waited += 0.25
 	Input.action_release("move_forward")
-	results.append(["gate opens and leads to the course", ta.active, taxi.global_position])
+	results.append(["hidden hedge passage leads to the course", ta.active, taxi.global_position])
 	while ta.state != TimeAttack.State.RUNNING and waited < 15.0:
 		await _wait(0.1)
 		waited += 0.1
@@ -131,10 +131,15 @@ func run_selftest(gm: Node) -> void:
 
 
 ## 次のチェックポイントへ向かう簡易自動運転 (戻り値はスティック入力と同じ形式)
+var _ap_idx := 1
+
+
 func _autopilot(taxi: Taxi, ta: TimeAttack) -> Vector2:
-	var idx := ta._next_cp if ta._next_cp < TimeAttack.ROUTE.size() else 0
-	var target: Vector2 = TimeAttack.ROUTE[idx]
 	var p := Vector2(taxi.global_position.x - TimeAttack.ORIGIN.x, taxi.global_position.z - TimeAttack.ORIGIN.z)
+	var route := TimeAttack.ROUTE
+	if p.distance_to(route[_ap_idx]) < 6.0:  # 頂点に近づいたら次の頂点へ
+		_ap_idx = (_ap_idx + 1) % route.size()
+	var target: Vector2 = route[_ap_idx]
 	var to := (target - p).normalized()
 	var yaw := taxi.rotation.y
 	var fwd := Vector2(-sin(yaw), -cos(yaw))
@@ -197,6 +202,15 @@ func run(gm: Node) -> void:
 	await _wait(2.0)
 	taxi.ai_input = Vector2.ZERO
 	_save("16_course_driving")
+	var cam: Camera3D = taxi._cam
+	taxi.set_process(false)
+	cam.global_position = TimeAttack.ORIGIN + Vector3(110, 210, 230)
+	cam.look_at(TimeAttack.ORIGIN + Vector3(110, 0, 80), Vector3.UP)
+	cam.far = 600.0
+	await _frames(10)
+	_save("17_course_overview")
+	cam.far = 220.0
+	taxi.set_process(true)
 	await ta.exit_course()
 	taxi.leave()
 	player.set_physics_process(false)

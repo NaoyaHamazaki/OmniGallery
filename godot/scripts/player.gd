@@ -9,7 +9,7 @@ signal transit_started(dest_floor: int)
 const HEAD_Y := 1.55
 const FOV_DEFAULT := 75.0
 const FOV_MIN := 22.0
-const STEP_DISTANCE := 0.68
+const STEP_DISTANCE := 1.15  # 歩幅 (ゲーム内の歩く速さ 3.5m/s で 1 秒に約 3 歩)
 const JUMP_VELOCITY := 4.2  # 約 0.9m の高さまで跳べる
 
 @export var walk_speed: float = 3.5

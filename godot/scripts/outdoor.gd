@@ -17,10 +17,10 @@ const X1 := 32.0
 const BX0 := Building.X_MIN - Building.WALL_T  # 建物の外形
 const BX1 := Building.X_MAX + Building.WALL_T
 const SPAWN := Vector3(-3.0, -1.2, 40.0)
-## 駐車場の南端のゲート (タクシーに乗っているときだけ開き、その先がタイムアタックのコースへの入口)
+## 隠し入口: 駐車場の南端の生け垣のこの区間だけ、タクシーに乗っているとすり抜けられ、
+## 突っ込むとタイムアタックのコースへ移動する (見た目は他の生け垣と同じで何も表示しない)
 const GATE_X := 22.0
 const GATE_W := 8.0
-const GATE_ROAD_END := LOT_Z + 14.0
 const DOOR_X := -3.0
 const DOOR_W := 2.8
 const DOOR_H := 3.2
@@ -33,10 +33,7 @@ var _leaves: Array[AnimatableBody3D] = []
 var _progress_label: Label3D
 var _progress_fill: MeshInstance3D
 var _banners: Array[StandardMaterial3D] = []
-var _gate_arm: Node3D
-var _gate_body: CollisionShape3D
-var _gate_sign: Node3D
-var _gate_open := 0.0
+var _gate_body: StaticBody3D
 
 var _b: Building
 var _player: Node3D
@@ -80,16 +77,14 @@ func _physics_process(delta: float) -> void:
 	_update_doors(delta)
 
 
-func _update_gate(delta: float) -> void:
+func _update_gate(_delta: float) -> void:
 	var taxi: Taxi = get_node_or_null("Taxi")
 	var ta: TimeAttack = get_tree().current_scene.get_node_or_null("%TimeAttack")
-	var driving := taxi != null and taxi.driving and not (ta and ta.active)
-	_gate_open = move_toward(_gate_open, 1.0 if driving else 0.0, delta * 1.5)
-	_gate_arm.rotation.z = -_gate_open * deg_to_rad(80.0)  # バーが跳ね上がる
-	_gate_body.disabled = _gate_open > 0.5
-	_gate_sign.visible = driving
-	# ゲートの先まで走ったらタイムアタックのコースへ
-	if driving and ta and taxi.global_position.z > LOT_Z + 7.0 and absf(taxi.global_position.x - GATE_X) < GATE_W:
+	if taxi == null or ta == null or ta.active or not taxi.driving:
+		return
+	# 運転中に隠し入口の生け垣へ突っ込んだらコースへ
+	var p := taxi.global_position
+	if p.z > LOT_Z - 2.2 and absf(p.x - GATE_X) < GATE_W / 2.0:
 		ta.enter()
 
 
@@ -498,40 +493,19 @@ func _build_boundaries() -> void:
 	# 外周の生け垣 (見た目)
 	_box(Vector3(X0 + 0.6, GROUND_Y + 0.6, (FACADE_Z + LOT_Z) / 2.0), Vector3(1.2, 1.2, LOT_Z - FACADE_Z), mat_green, false)
 	_box(Vector3(X1 - 0.6, GROUND_Y + 0.6, (FACADE_Z + LOT_Z) / 2.0), Vector3(1.2, 1.2, LOT_Z - FACADE_Z), mat_green, false)
-	_box(Vector3((X0 + GATE_X - GATE_W / 2.0) / 2.0, GROUND_Y + 0.6, LOT_Z - 0.6),
-		Vector3(GATE_X - GATE_W / 2.0 - X0, 1.2, 1.2), mat_green, false)
-	_box(Vector3((GATE_X + GATE_W / 2.0 + X1) / 2.0, GROUND_Y + 0.6, LOT_Z - 0.6),
-		Vector3(X1 - GATE_X - GATE_W / 2.0, 1.2, 1.2), mat_green, false)
+	_box(Vector3((X0 + X1) / 2.0, GROUND_Y + 0.6, LOT_Z - 0.6), Vector3(X1 - X0, 1.2, 1.2), mat_green, false)
 
 
-## 駐車場のゲート: 遮断機 + 外へ続く道 (道の先でコースへ移動)
-func _build_gate(g0: float, g1: float) -> void:
-	var road_len := GATE_ROAD_END - LOT_Z
-	_box(Vector3(GATE_X, GROUND_Y - 0.25, LOT_Z + road_len / 2.0), Vector3(GATE_W, 0.5, road_len), mat_asphalt)
-	for x in [g0 - 0.6, g1 + 0.6]:
-		_box(Vector3(x, GROUND_Y + 0.6, LOT_Z + road_len / 2.0), Vector3(1.2, 1.2, road_len), mat_green, false)
-		_wall(Vector3(x, 0, LOT_Z + road_len / 2.0), Vector3(1.2, 8.0, road_len))
-	_wall(Vector3(GATE_X, 0, GATE_ROAD_END), Vector3(GATE_W, 8.0, 0.5))
-	# 遮断機 (支柱 + 紅白のバー)
-	_box(Vector3(g0 + 0.3, GROUND_Y + 0.55, LOT_Z), Vector3(0.35, 1.1, 0.35), mat_trim, false)
-	_gate_arm = Node3D.new()
-	_gate_arm.position = Vector3(g0 + 0.3, GROUND_Y + 1.0, LOT_Z)
-	add_child(_gate_arm)
-	var red := _b._mat(Color(0.8, 0.12, 0.1), 0.6)
-	for i in 6:
-		_box(Vector3(0.65 + i * 1.25, 0, 0), Vector3(1.25, 0.12, 0.08), red if i % 2 == 0 else mat_line, false, _gate_arm)
-	var body := StaticBody3D.new()
-	_gate_body = CollisionShape3D.new()
+## 隠し入口の当たり判定: 歩いている人は通れないが、タクシーだけは衝突しない (すり抜ける)
+func _build_gate(_g0: float, _g1: float) -> void:
+	_gate_body = StaticBody3D.new()
+	var cs := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(GATE_W, 3.0, 0.4)
-	_gate_body.shape = shape
-	body.add_child(_gate_body)
-	body.position = Vector3(GATE_X, GROUND_Y + 1.5, LOT_Z)
-	add_child(body)
-	# タクシーに乗っているときだけ見える案内
-	_gate_sign = Node3D.new()
-	add_child(_gate_sign)
-	var l := _label("TIME ATTACK", Vector3(GATE_X, GROUND_Y + 2.6, LOT_Z - 0.3), 64, 0.008, Color(1.0, 0.85, 0.45))
-	l.rotation.y = PI  # 駐車場側 (北) を向く
-	l.reparent(_gate_sign)
-	_gate_sign.visible = false
+	shape.size = Vector3(GATE_W, 8.0, 0.5)
+	cs.shape = shape
+	_gate_body.add_child(cs)
+	_gate_body.position = Vector3(GATE_X, 0, LOT_Z)
+	add_child(_gate_body)
+	var taxi: Taxi = get_node_or_null("Taxi")
+	if taxi:
+		taxi.add_collision_exception_with(_gate_body)
