@@ -1,0 +1,163 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scripts/api_client.gd" id="1_api"]
+[ext_resource type="Script" path="res://scripts/ui.gd" id="2_ui"]
+[ext_resource type="Script" path="res://scripts/touch_controls.gd" id="3_touch"]
+[ext_resource type="Script" path="res://scripts/building.gd" id="4_building"]
+[ext_resource type="Script" path="res://scripts/player.gd" id="5_player"]
+[ext_resource type="Script" path="res://scripts/gallery_manager.gd" id="6_gallery"]
+[ext_resource type="Script" path="res://scripts/outdoor.gd" id="7_outdoor"]
+[ext_resource type="Script" path="res://scripts/audio.gd" id="8_audio"]
+[ext_resource type="FontFile" path="res://fonts/EBGaramond.ttf" id="9_body"]
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]
+sky_top_color = Color(0.24, 0.36, 0.6, 1)
+sky_horizon_color = Color(0.96, 0.72, 0.52, 1)
+ground_bottom_color = Color(0.18, 0.16, 0.15, 1)
+ground_horizon_color = Color(0.7, 0.55, 0.45, 1)
+sun_angle_max = 20.0
+
+[sub_resource type="Sky" id="Sky_main"]
+sky_material = SubResource("Sky_mat")
+
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 2
+sky = SubResource("Sky_main")
+ambient_light_source = 2
+ambient_light_color = Color(0.86, 0.82, 0.76, 1)
+ambient_light_energy = 0.32
+reflected_light_source = 1
+tonemap_mode = 2
+tonemap_white = 6.0
+
+[sub_resource type="CapsuleShape3D" id="Shape_player"]
+radius = 0.35
+height = 1.7
+
+[sub_resource type="LabelSettings" id="LabelSettings_hud"]
+font = ExtResource("9_body")
+font_size = 20
+outline_size = 5
+outline_color = Color(0, 0, 0, 0.85)
+
+[node name="Main" type="Node3D"]
+
+[node name="Api" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("1_api")
+
+[node name="Audio" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("8_audio")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_main")
+
+[node name="UI" type="CanvasLayer" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2_ui")
+
+[node name="Status" type="Label" parent="UI"]
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 600.0
+offset_bottom = 40.0
+label_settings = SubResource("LabelSettings_hud")
+
+[node name="FloorLabel" type="Label" parent="UI"]
+unique_name_in_owner = true
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -520.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = 40.0
+grow_horizontal = 0
+text = "ENTRANCE PLAZA"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 2
+
+[node name="Help" type="Label" parent="UI"]
+unique_name_in_owner = true
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = -40.0
+offset_right = 1200.0
+offset_bottom = -12.0
+grow_vertical = 0
+text = "Click: look around / view artwork (within 2 m)   WASD: move   Shift: run   Wheel: zoom   M: sound   Esc: release mouse"
+label_settings = SubResource("LabelSettings_hud")
+
+[node name="Crosshair" type="Label" parent="UI"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -14.0
+offset_right = 10.0
+offset_bottom = 14.0
+text = "+"
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Hover" type="Label" parent="UI"]
+unique_name_in_owner = true
+anchor_left = 0.5
+anchor_top = 0.75
+anchor_right = 0.5
+anchor_bottom = 0.75
+offset_left = -400.0
+offset_top = -16.0
+offset_right = 400.0
+offset_bottom = 16.0
+label_settings = SubResource("LabelSettings_hud")
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TouchControls" type="Control" parent="UI"]
+unique_name_in_owner = true
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("3_touch")
+
+[node name="Building" type="Node3D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("4_building")
+
+[node name="Outdoor" type="Node3D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("7_outdoor")
+
+[node name="Player" type="CharacterBody3D" parent="."]
+unique_name_in_owner = true
+position = Vector3(-3, -1.2, 40)
+script = ExtResource("5_player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
+position = Vector3(0, 0.85, 0)
+shape = SubResource("Shape_player")
+
+[node name="Head" type="Node3D" parent="Player"]
+position = Vector3(0, 1.55, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Player/Head"]
+current = true
+fov = 75.0
+near = 0.05
+far = 200.0
+
+[node name="GalleryManager" type="Node3D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("6_gallery")

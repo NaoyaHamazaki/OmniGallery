@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+<title>$GODOT_PROJECT_NAME</title>
+<!-- OmniGallery 専用のロード画面 (Godot の Web エクスポートの「カスタム HTML シェル」) -->
+<style>
+@font-face {
+	font-family: 'Cinzel';
+	src: url('../static/brand/fonts/Cinzel.ttf') format('truetype');
+	font-display: swap;
+}
+html, body, #canvas { margin: 0; padding: 0; border: 0; }
+body { color: #ece6da; background: #1f2433; overflow: hidden; touch-action: none; }
+#canvas { display: block; }
+#canvas:focus { outline: none; }
+
+#status {
+	position: absolute; inset: 0;
+	display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 14px;
+	background: radial-gradient(ellipse at 50% 40%, #2b3247 0%, #1f2433 55%, #151824 100%);
+	font-family: 'Cinzel', Georgia, 'Times New Roman', serif;
+	transition: opacity .6s ease;
+}
+#status.done { opacity: 0; pointer-events: none; }
+.logo { width: 56px; height: 56px; filter: drop-shadow(0 0 12px rgba(201,164,92,.35)); animation: float 3s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-4px); } }
+.title { font-size: 22px; letter-spacing: .18em; color: #f6f0e4; }
+.sub { font-size: 11px; letter-spacing: .3em; color: #9a96a0; margin-top: -8px; }
+.bar {
+	position: relative; width: min(260px, 70vw); height: 4px; margin-top: 10px;
+	background: rgba(255,255,255,.08); border-radius: 2px; overflow: hidden;
+}
+.fill {
+	position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+	background: linear-gradient(90deg, #8a6a32, #c9a45c 60%, #ffe2a0);
+	box-shadow: 0 0 10px rgba(255, 210, 130, .7);
+	transition: width .3s ease-out;
+}
+.fill::after { /* きらっと流れる光 */
+	content: ''; position: absolute; top: 0; bottom: 0; width: 40px; left: -40px;
+	background: linear-gradient(90deg, transparent, rgba(255,255,255,.8), transparent);
+	animation: shine 1.4s linear infinite;
+}
+@keyframes shine { to { left: 100%; } }
+.row { display: flex; justify-content: space-between; width: min(260px, 70vw); font-size: 10px; letter-spacing: .2em; color: #c9a45c; }
+#notice { display: none; max-width: 80vw; padding: 12px 16px; border: 1px solid #9b3943; border-radius: 8px;
+	background: #5b3943; font-family: sans-serif; font-size: 14px; line-height: 1.4; text-align: center; }
+</style>
+$GODOT_HEAD_INCLUDE
+</head>
+<body>
+<canvas id="canvas">Your browser does not support the canvas tag.</canvas>
+<noscript>Your browser does not support JavaScript.</noscript>
+
+<div id="status">
+	<svg class="logo" viewBox="0 0 512 512" aria-hidden="true">
+		<rect width="512" height="512" rx="104" fill="#1f2433" stroke="#c9a45c" stroke-opacity=".35" stroke-width="10"/>
+		<path d="M256 70 L330 112 H182 Z" fill="#c9a45c" opacity="0.55"/>
+		<rect x="96" y="112" width="320" height="288" rx="12" fill="#c9a45c"/>
+		<rect x="126" y="142" width="260" height="228" fill="#f2ebdd"/>
+		<circle cx="322" cy="202" r="30" fill="#e07a3f"/>
+		<polygon points="126,370 214,252 266,318 302,282 386,370" fill="#2f5d73"/>
+	</svg>
+	<div class="title">OMNIGALLERY</div>
+	<div class="sub">VIRTUAL MUSEUM</div>
+	<div class="bar"><div class="fill" id="fill"></div></div>
+	<div class="row"><span id="msg">Unlocking the gates</span><span id="pct">0%</span></div>
+	<div id="notice"></div>
+</div>
+
+<script src="$GODOT_URL"></script>
+<script>
+const GODOT_CONFIG = $GODOT_CONFIG;
+const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const status = document.getElementById('status');
+	const fill = document.getElementById('fill');
+	const pct = document.getElementById('pct');
+	const msg = document.getElementById('msg');
+	const notice = document.getElementById('notice');
+	const messages = ['Unlocking the gates', 'Polishing the frames', 'Dusting the sculptures', 'Warming up the spotlights', 'Opening the doors'];
+
+	function setProgress(r) {
+		const p = Math.max(0, Math.min(1, r));
+		fill.style.width = (p * 100).toFixed(1) + '%';
+		pct.textContent = Math.round(p * 100) + '%';
+		msg.textContent = messages[Math.min(messages.length - 1, Math.floor(p * messages.length))];
+	}
+
+	function fail(err) {
+		console.error(err);
+		notice.textContent = (err && err.message) ? err.message : String(err);
+		notice.style.display = 'block';
+	}
+
+	const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
+	if (missing.length !== 0) {
+		// http://192.168.x.x のように「安全なコンテキスト」でない URL で開いた場合 (スマホでの LAN 確認など)
+		if (!window.isSecureContext && location.protocol === 'http:') {
+			const https = 'https://' + location.hostname + ':8443' + location.pathname;
+			notice.innerHTML = 'このページは HTTPS で開く必要があります<br><small>(ブラウザの安全機能により http では起動できません)</small><br><br>'
+				+ '<a href="' + https + '" style="color:#ffe2a0;font-size:16px">' + https + ' を開く</a>'
+				+ '<br><small>警告が出たら「詳細」→「アクセスする」で進んでください</small>';
+			notice.style.display = 'block';
+			msg.textContent = 'HTTPS required';
+			return;
+		}
+		fail('The following features required to run this app are missing:\n' + missing.join('\n'));
+		return;
+	}
+	engine.startGame({
+		onProgress: function (current, total) {
+			if (current > 0 && total > 0) {
+				setProgress(current / total);
+			}
+		},
+	}).then(() => {
+		setProgress(1);
+		status.classList.add('done');
+		setTimeout(() => status.remove(), 700);
+	}, fail);
+}());
+</script>
+</body>
+</html>

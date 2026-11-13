@@ -1,0 +1,7 @@
+backend/.venv/
+__pycache__/
+backend/data/
+godot/.godot/
+# Web ビルドはデプロイのためにコミットする (サーバーが生成する圧縮版だけ除外)
+godot/build/web/*.gz
+godot/build/web/*.tmp
