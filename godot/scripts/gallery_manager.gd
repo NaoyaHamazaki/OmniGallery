@@ -43,6 +43,7 @@ var _frame_mat: StandardMaterial3D
 var _warm_vp: SubViewport
 var _warm_cam: Camera3D
 var _zone := ""
+var _models := {}  # id -> {art, spinner, floor, hq_loaded}
 
 
 func _ready() -> void:
@@ -53,6 +54,7 @@ func _ready() -> void:
 	player.floor_changed.connect(func(_f): _update_zone(true))
 	player.transit_started.connect(func(f): prepare_floor(f))  # 移動を始めた瞬間から準備開始
 	player.floor_gate = prepare_floor
+	ui.action_requested.connect(_on_ui_action)
 	_load()
 
 
@@ -401,6 +403,7 @@ func _create_model(art: Dictionary, slot: Dictionary, f: int) -> void:
 	_aim_spot(spot, light_pos, target, size * 0.9 + 0.6, int(art.get("light_kelvin", 5000)))
 
 	var p := {"art": art, "texture": null}
+	_models[str(art.get("id", ""))] = {"art": art, "spinner": spinner, "floor": f, "hq_loaded": false}
 	Interact.attach(blocker, str(art.get("title", "Untitled")), _open_artwork.bind(p))
 	Interact.attach(stand_body, str(art.get("title", "Untitled")), _open_artwork.bind(p))
 	var pos: Vector3 = slot["pos"]
@@ -408,10 +411,11 @@ func _create_model(art: Dictionary, slot: Dictionary, f: int) -> void:
 	_load_model(art, spinner, f)
 
 
-func _load_model(art: Dictionary, spinner: Node3D, f: int) -> void:
-	var body := await api.get_bytes(art.get("url", ""), 180.0)
+func _load_model(art: Dictionary, spinner: Node3D, f: int, hq: bool = false) -> void:
+	var body := await api.get_bytes(art.get("hq_url" if hq else "url", ""), 300.0)
 	if body.is_empty():
-		_finish_item(f, false)
+		if not hq:
+			_finish_item(f, false)
 		return
 	await api.decode_turn()  # glTF の解析は重いので他の重い処理と同じフレームに重ねない
 	var doc := GLTFDocument.new()
@@ -421,14 +425,25 @@ func _load_model(art: Dictionary, spinner: Node3D, f: int) -> void:
 	var err := doc.append_from_buffer(body, "", state)
 	if err != OK:
 		push_warning("glTF parse failed for %s: %s" % [art.get("id"), error_string(err)])
-		_finish_item(f, false)
+		if not hq:
+			_finish_item(f, false)
 		return
 	await api.decode_turn()
 	var scene := doc.generate_scene(state)
+	if hq:  # 高品質版に差し替え
+		for c in spinner.get_children():
+			c.queue_free()
 	var holder := Node3D.new()
 	spinner.add_child(holder)
 	holder.add_child(scene)
 
+	# 館内は空の映り込みを切っているため、金属の面は黒くつぶれる。金属感を抑えて照明で色が見えるようにする
+	for n in scene.find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		for i in mi.get_surface_override_material_count():
+			var m := mi.get_active_material(i) as BaseMaterial3D
+			if m and m.metallic > 0.35:
+				m.metallic = 0.35
 	# モデルの大きさを測り、display_size (m) に収まるよう拡縮して台座の上に乗せる
 	var aabb := _measure(scene, holder)
 	var longest := maxf(aabb.size.x, maxf(aabb.size.y, aabb.size.z))
@@ -445,7 +460,8 @@ func _load_model(art: Dictionary, spinner: Node3D, f: int) -> void:
 		var pick: String = "Survey" if names.has("Survey") else names[0]
 		player_node.get_animation(pick).loop_mode = Animation.LOOP_LINEAR
 		player_node.play(pick)
-	_finish_item(f, true)
+	if not hq:
+		_finish_item(f, true)
 
 
 func _measure(scene: Node, holder: Node3D) -> AABB:
@@ -560,4 +576,29 @@ func _open_artwork(p: Dictionary) -> void:
 	var src := str(art.get("source_url", ""))
 	if src != "":
 		bb += "[font_size=16][url=%s]View source[/url][/font_size]" % src
+	var info: Dictionary = _models.get(str(art.get("id", "")), {})
+	if art.has("hq_url") and not info.get("hq_loaded", false):
+		bb += "
+
+[font_size=18][url=omni:hq:%s]> Load the high-quality version (%s MB)[/url][/font_size]" % [
+			art.get("id"), str(art.get("hq_mb", "?"))]
+	elif info.get("hq_loaded", false):
+		bb += "
+
+[color=#9a96a0][font_size=16]Showing the high-quality version.[/font_size][/color]"
 	ui.show_modal(str(art.get("title", "Untitled")), bb, p.get("texture"))
+
+
+## モーダルのリンクからの操作 (現在は 3D 作品の高品質版の読み込みのみ)
+func _on_ui_action(action: String) -> void:
+	if not action.begins_with("hq:"):
+		return
+	var info: Dictionary = _models.get(action.trim_prefix("hq:"), {})
+	if info.is_empty() or info.get("hq_loaded", false):
+		return
+	info["hq_loaded"] = true
+	ui.close_modal()
+	var art: Dictionary = info["art"]
+	ui.set_status("Loading the high-quality version (%s MB) ..." % str(art.get("hq_mb", "?")))
+	await _load_model(art, info["spinner"], info["floor"], true)
+	ui.set_status("High-quality version loaded", 3.0)

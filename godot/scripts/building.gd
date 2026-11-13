@@ -207,6 +207,7 @@ func get_pedestal_slots(f: int) -> Array:
 		return [
 			{"pos": Vector3(-9.5, y, 1.0), "facing": Vector3.BACK},
 			{"pos": Vector3(3.5, y, 1.0), "facing": Vector3.BACK},
+			{"pos": Vector3(-3.0, y, -3.5), "facing": Vector3.BACK},  # 1F 中央 (投稿作品用に追加)
 		]
 	return [
 		{"pos": Vector3(-9.0, y, 3.5), "facing": Vector3.FORWARD},

@@ -5,3 +5,6 @@ godot/.godot/
 # Web ビルドはデプロイのためにコミットする (サーバーが生成する圧縮版だけ除外)
 godot/build/web/*.gz
 godot/build/web/*.tmp
+
+# ローカル検証用の投稿テスト作品 (権利の都合で公開リポジトリ・本番には載せない)
+backend/static/models/irobny*.glb

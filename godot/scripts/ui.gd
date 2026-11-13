@@ -4,6 +4,8 @@ extends CanvasLayer
 ## モーダルはコードで組み立てる (シーンを手で編集しなくて済むように)。
 
 signal modal_closed
+## モーダル本文の [url=omni:...] リンクが押された (gallery_manager が処理する)
+signal action_requested(action: String)
 
 const GOLD := Color(0.79, 0.64, 0.36)
 
@@ -508,7 +510,12 @@ func _build_modal() -> void:
 	_body.add_theme_font_size_override("normal_font_size", 22)
 	_body.add_theme_font_size_override("bold_font_size", 24)
 	_body.add_theme_color_override("default_color", Color(0.88, 0.86, 0.82))
-	_body.meta_clicked.connect(func(meta): OS.shell_open(str(meta)))
+	_body.meta_clicked.connect(func(meta):
+		var m := str(meta)
+		if m.begins_with("omni:"):
+			action_requested.emit(m.trim_prefix("omni:"))  # ゲーム内の操作 (例: 高品質版の読み込み)
+		else:
+			OS.shell_open(m))
 	_scroll.add_child(_body)
 
 

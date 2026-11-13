@@ -113,6 +113,12 @@ SEED_ARTWORKS: list[dict] = [
      "title": "Damask Chair", "artist": "Eric Chadwick / Wayfair", "year": 2021,
      "description": "A small high-end seat upholstered in purple and gold damask.",
      "file": "damask_chair.glb", "remote": "ChairDamaskPurplegold", "credit": "Eric Chadwick, Wayfair - CC BY 4.0"},
+    {"id": "upload-test-01", "kind": "model", "floor": 1, "light_kelvin": 5000, "display_size": 3.0,
+     "title": "Upload Test 01", "artist": "Test upload (local only)", "year": 2026,
+     "description": "A rigged figure converted from a Blender file to test how uploaded works are displayed: "
+                    "a lightweight version is shown by default and the original can be loaded on request.",
+     "file": "irobny_lite.glb", "hq_file": "irobny.glb", "remote": None,
+     "credit": "Local test file - not for public deployment"},
     # ---- 2F ----
     {"id": "great-wave", "kind": "painting", "floor": 2, "featured": 1, "light_kelvin": 3000,
      "title": "The Great Wave off Kanagawa", "artist": "Katsushika Hokusai", "year": 1831,
@@ -171,6 +177,8 @@ def _download(url: str, dest: Path) -> None:
 
 def download_assets() -> None:
     for art in SEED_ARTWORKS:
+        if art["remote"] is None:  # ローカルに置いた投稿テスト作品はダウンロードしない
+            continue
         if art["kind"] == "painting":
             name = urllib.parse.quote(art["remote"])
             url = f"https://commons.wikimedia.org/wiki/Special:FilePath/{name}?width=1280"
@@ -209,6 +217,7 @@ CREATE TABLE IF NOT EXISTS artworks (
     featured INTEGER NOT NULL DEFAULT 0,
     light_kelvin INTEGER NOT NULL DEFAULT 3000,
     display_size REAL,
+    hq_file TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'published',
     created_at TEXT NOT NULL
@@ -235,6 +244,9 @@ def init_db() -> None:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with closing(db()) as conn, conn:
         conn.executescript(SCHEMA)
+        cols = [c[1] for c in conn.execute("PRAGMA table_info(artworks)")]
+        if "hq_file" not in cols:  # 既存の DB に列を追加
+            conn.execute("ALTER TABLE artworks ADD COLUMN hq_file TEXT")
         conn.executemany(
             "INSERT INTO floors (id, name, title, description) VALUES (:id, :name, :title, :description) "
             "ON CONFLICT(id) DO UPDATE SET name=excluded.name, title=excluded.title, description=excluded.description",
@@ -246,21 +258,23 @@ def init_db() -> None:
             rows.append({
                 "id": a["id"], "kind": a["kind"], "title": a["title"], "artist": a["artist"],
                 "year": a.get("year"), "description": a["description"], "file": a["file"],
-                "source_url": (WIKI + a["remote"].replace(" ", "_")) if painting else KHRONOS + a["remote"],
+                "source_url": "" if a["remote"] is None else
+                (WIKI + a["remote"].replace(" ", "_")) if painting else KHRONOS + a["remote"],
                 "credit": a.get("credit", PD_CREDIT), "floor": a["floor"], "featured": a.get("featured", 0),
                 "light_kelvin": a["light_kelvin"], "display_size": a.get("display_size"),
+                "hq_file": a.get("hq_file"),
                 "sort_order": i, "created_at": now,
             })
         # シード作品は毎回最新の定義で上書き (UGC 投稿分は影響を受けない)
         conn.executemany(
             "INSERT INTO artworks (id, kind, title, artist, year, description, file, source_url, credit, floor, "
-            "featured, light_kelvin, display_size, sort_order, created_at) VALUES (:id, :kind, :title, :artist, "
-            ":year, :description, :file, :source_url, :credit, :floor, :featured, :light_kelvin, :display_size, "
+            "featured, light_kelvin, display_size, hq_file, sort_order, created_at) VALUES (:id, :kind, :title, :artist, "
+            ":year, :description, :file, :source_url, :credit, :floor, :featured, :light_kelvin, :display_size, :hq_file, "
             ":sort_order, :created_at) ON CONFLICT(id) DO UPDATE SET kind=excluded.kind, title=excluded.title, "
             "artist=excluded.artist, year=excluded.year, description=excluded.description, file=excluded.file, "
             "source_url=excluded.source_url, credit=excluded.credit, floor=excluded.floor, "
             "featured=excluded.featured, light_kelvin=excluded.light_kelvin, display_size=excluded.display_size, "
-            "sort_order=excluded.sort_order",
+            "hq_file=excluded.hq_file, sort_order=excluded.sort_order",
             rows,
         )
 
@@ -323,6 +337,10 @@ def list_artworks(request: Request) -> dict:
         item["url"] = str(request.url_for(mount, path=r["file"]))
         if r["kind"] == "model":
             item["display_size"] = r["display_size"] or 1.0
+            hq = MODEL_DIR / r["hq_file"] if r["hq_file"] else None
+            if hq and hq.exists():  # 軽量版を常時表示し、希望した人だけ高品質版を読み込む
+                item["hq_url"] = str(request.url_for("models", path=r["hq_file"]))
+                item["hq_mb"] = round(hq.stat().st_size / 1_048_576, 1)
         items.append(item)
     return {"artworks": items}
 
