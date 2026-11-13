@@ -10,6 +10,7 @@ const HEAD_Y := 1.55
 const FOV_DEFAULT := 75.0
 const FOV_MIN := 22.0
 const STEP_DISTANCE := 0.68
+const JUMP_VELOCITY := 4.2  # 約 0.9m の高さまで跳べる
 
 @export var walk_speed: float = 3.5
 @export var sprint_multiplier: float = 1.8
@@ -158,6 +159,8 @@ func _walk(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= _gravity * delta
 	var input_dir := Vector2.ZERO
+	if not _modal_open() and is_on_floor() and Input.is_action_just_pressed("jump"):
+		velocity.y = JUMP_VELOCITY
 	if not _modal_open():
 		input_dir = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 		if touch_controls and touch_controls.move_vector != Vector2.ZERO:
@@ -252,6 +255,7 @@ func _register_input_actions() -> void:
 		"move_left": [KEY_A, KEY_LEFT],
 		"move_right": [KEY_D, KEY_RIGHT],
 		"sprint": [KEY_SHIFT],
+		"jump": [KEY_SPACE],
 	}
 	for action in bindings:
 		if InputMap.has_action(action):
