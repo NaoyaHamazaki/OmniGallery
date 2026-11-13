@@ -175,7 +175,21 @@ func finish_loading() -> void:
 	tw.tween_callback(func(): _loading.visible = false)
 
 
+var _small_buttons: Array[Control] = []
+var _menu_button: Button
+var _touch_layout := false
+
+
 func _process(_delta: float) -> void:
+	# スマホ (タッチ操作) では小さなボタンと操作説明を隠し、大きな MENU ボタンにまとめる
+	if touch_controls.visible != _touch_layout:
+		_touch_layout = touch_controls.visible
+		for b in _small_buttons:
+			b.visible = not _touch_layout
+		_menu_button.visible = _touch_layout
+		var help: Label = get_node_or_null("%Help")
+		if help:
+			help.visible = not _touch_layout
 	if _loading.visible:
 		# バーの光をゆっくり脈動させる
 		var fill: StyleBoxFlat = _loading_bar.get_theme_stylebox("fill")
@@ -214,6 +228,82 @@ func _build_mute() -> void:
 	quit.offset_bottom = 122
 	quit.pressed.connect(confirm_quit)
 	add_child(quit)
+	_small_buttons = [_mute_button, fs, quit]
+	# スマホ用の大きな MENU ボタン (タッチ操作のときだけ表示)
+	_menu_button = Button.new()
+	_menu_button.text = "MENU"
+	_menu_button.focus_mode = Control.FOCUS_NONE
+	_menu_button.add_theme_font_override("font", GalleryFonts.title())
+	_menu_button.add_theme_font_size_override("font_size", 26)
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.11, 0.12, 0.16, 0.8)
+	st.border_color = GOLD
+	st.set_border_width_all(2)
+	st.set_corner_radius_all(12)
+	for s in ["normal", "hover", "pressed"]:
+		_menu_button.add_theme_stylebox_override(s, st)
+	_menu_button.anchor_left = 1.0
+	_menu_button.anchor_right = 1.0
+	_menu_button.offset_left = -170
+	_menu_button.offset_right = -16
+	_menu_button.offset_top = 50
+	_menu_button.offset_bottom = 110
+	_menu_button.visible = false
+	_menu_button.pressed.connect(open_menu)
+	add_child(_menu_button)
+
+
+## スマホ用メニュー: 大きなボタンの設定 + 操作方法
+func open_menu() -> void:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 18)
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 16)
+	var audio: GalleryAudio = get_node_or_null("%Audio")
+	var sound := _big_button("SOUND: %s" % ("OFF" if audio and audio.muted else "ON"))
+	sound.pressed.connect(func():
+		if audio:
+			set_muted(audio.toggle_mute())
+			sound.text = "SOUND: %s" % ("OFF" if audio.muted else "ON"))
+	row.add_child(sound)
+	var fs := _big_button("FULLSCREEN")
+	fs.pressed.connect(toggle_fullscreen)
+	row.add_child(fs)
+	var ex := _big_button("EXIT")
+	ex.pressed.connect(confirm_quit)
+	row.add_child(ex)
+	box.add_child(row)
+	var help := RichTextLabel.new()
+	help.bbcode_enabled = true
+	help.fit_content = true
+	help.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	help.add_theme_font_size_override("normal_font_size", 22)
+	help.add_theme_color_override("default_color", Color(0.9, 0.88, 0.84))
+	help.text = "[color=#c9a45c]HOW TO PLAY[/color]\n" \
+		+ "Left side of the screen  -  move (virtual stick)\n" \
+		+ "Right side  -  drag to look around\n" \
+		+ "Tap  -  view an artwork / press a button (within 2 m)\n" \
+		+ "Stairs & escalators  -  walk on a little and you will be carried\n" \
+		+ "Elevator  -  tap the call button, then the floor button inside\n\n" \
+		+ "[color=#9a96a0]iPhone: for full screen without the address bar, use Share > Add to Home Screen and open it from the icon.[/color]"
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	help.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(help)
+	box.add_child(scroll)
+	show_custom("Menu", box)
+
+
+func _big_button(text: String) -> Button:
+	var b := Button.new()
+	b.text = "  %s  " % text
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0, 64)
+	b.add_theme_font_override("font", GalleryFonts.title())
+	b.add_theme_font_size_override("font_size", 22)
+	return b
 
 
 func toggle_fullscreen() -> void:

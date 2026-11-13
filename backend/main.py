@@ -42,6 +42,7 @@ from pydantic import BaseModel, Field
 mimetypes.add_type("application/wasm", ".wasm")
 mimetypes.add_type("text/javascript", ".js")
 mimetypes.add_type("model/gltf-binary", ".glb")
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -459,6 +460,12 @@ def _meta_tags(base: str) -> str:
         lines.append(f'<meta {attr}="{key}" content="{escape(value)}">')
     lines.append('<link rel="icon" href="/favicon.ico" sizes="any">')
     lines.append('<link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png">')
+    # ホーム画面に追加して起動するとアドレスバーなしの全画面になる (iPhone はこれが唯一の方法)
+    lines.append('<link rel="manifest" href="/static/brand/manifest.webmanifest">')
+    lines.append('<meta name="apple-mobile-web-app-capable" content="yes">')
+    lines.append('<meta name="mobile-web-app-capable" content="yes">')
+    lines.append('<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">')
+    lines.append('<meta name="apple-mobile-web-app-title" content="OmniGallery">')
     return "\n".join(lines)
 
 
