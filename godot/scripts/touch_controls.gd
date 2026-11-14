@@ -26,6 +26,10 @@ var _look_index := -1
 var _stick_center := Vector2.ZERO
 var _knob_pos := Vector2.ZERO
 var _touch_starts := {}  # index -> {pos, time}
+## 視点ドラッグの指の前回位置。移動量は event.relative を使わず自前で計算する
+## (Web 版ではタッチの番号が付け替わった直後に、別の指の古い位置との差が relative として届き、視点が急に飛ぶため)
+var _look_last := Vector2.ZERO
+const LOOK_JUMP_LIMIT := 120.0  # 1 回の移動量がこれを超えたら誤検知として無視 (画面座標)
 
 
 func set_enabled(value: bool) -> void:
@@ -74,6 +78,7 @@ func _input(event: InputEvent) -> void:
 					_knob_pos = event.position
 			elif _look_index == -1:
 				_look_index = event.index
+				_look_last = event.position
 		else:
 			if event.index == _stick_index:
 				_stick_index = -1
@@ -91,7 +96,10 @@ func _input(event: InputEvent) -> void:
 			move_vector = offset / stick_radius
 			queue_redraw()
 		elif event.index == _look_index:
-			look.emit(event.relative * look_sensitivity)
+			var delta: Vector2 = event.position - _look_last
+			_look_last = event.position
+			if delta.length() <= LOOK_JUMP_LIMIT:
+				look.emit(delta * look_sensitivity)
 
 
 func _reset_stick() -> void:
