@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -10,197 +10,324 @@
 @font-face { font-family: Cinzel; src: url('/static/brand/fonts/Cinzel.ttf'); font-display: swap; }
 :root {
   --bg: #1f2433; --bg2: #151824; --panel: #262c3d; --line: #3a4157;
-  --text: #ece6da; --muted: #9a96a0; --gold: #c9a45c; --gold2: #e2c48a;
-  --serif: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", Georgia, serif;
+  --text: #ece6da; --muted: #9a96a0; --soft: #d6d0c4; --gold: #c9a45c; --gold2: #e2c48a;
+  --serif: Georgia, "Times New Roman", serif;
+  --title: Cinzel, Georgia, serif;
 }
+html[lang="ja"] { --serif: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", Georgia, serif; }
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 body {
-  margin: 0; color: var(--text); font-family: var(--serif); line-height: 1.8;
+  margin: 0; color: var(--text); font-family: var(--serif); line-height: 1.75;
   background: radial-gradient(ellipse at 50% -10%, #2f374e, var(--bg) 45%, var(--bg2)) fixed;
   min-height: 100vh;
 }
 a { color: var(--gold2); }
 .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
-.en { font-family: Cinzel, Georgia, serif; letter-spacing: .14em; }
+.en { font-family: var(--title); letter-spacing: .14em; }
 
-.hero { text-align: center; padding: 40px 0 56px; }
-.hero .logo { width: 72px; height: 72px; }
-.hero h1 { font-family: Cinzel, Georgia, serif; font-weight: 400; letter-spacing: .2em; font-size: clamp(30px, 8vw, 56px);
-  margin: 12px 0 0; line-height: 1.2; }
-.hero .sub { font-family: Cinzel, Georgia, serif; letter-spacing: .3em; font-size: 13px; color: var(--gold); margin-top: 6px; }
-.hero .ja { font-size: 16px; color: #d6d0c4; margin-top: 14px; letter-spacing: .12em; }
+/* 言語の選択 (右上) */
+.lang { position: absolute; top: 14px; right: 16px; display: flex; align-items: center; gap: 6px; z-index: 2; }
+.lang svg { width: 16px; height: 16px; color: var(--muted); }
+.lang select {
+  appearance: none; -webkit-appearance: none; font: 14px var(--serif); color: var(--text); cursor: pointer;
+  background: rgba(255,255,255,.05) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239a96a0' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center / 10px;
+  border: 1px solid var(--line); border-radius: 8px; padding: 6px 30px 6px 10px; min-height: 36px;
+}
+.lang select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.lang option { background: var(--bg); color: var(--text); }
+
+/* ヒーロー */
+.hero { text-align: center; padding: 56px 0 56px; }
+.hero .logo { width: 104px; height: 104px; border-radius: 50%; filter: drop-shadow(0 6px 18px rgba(0,0,0,.5)); }
+.hero h1 { font-family: var(--title); font-weight: 400; letter-spacing: .2em; font-size: clamp(30px, 8vw, 56px);
+  margin: 14px 0 0; line-height: 1.2; }
+.hero .sub { font-family: var(--title); letter-spacing: .3em; font-size: 13px; color: var(--gold); margin-top: 6px; }
+.hero .tagline { font-size: 17px; color: var(--soft); margin-top: 14px; letter-spacing: .04em; }
 .hero .visual { display: block; width: 100%; max-width: 760px; margin: 28px auto 0; border-radius: 12px;
   border: 1px solid var(--line); box-shadow: 0 18px 50px rgba(0,0,0,.45); aspect-ratio: 1200 / 455; object-fit: cover; object-position: top; }
-.enter { display: inline-block; margin-top: 32px; padding: 16px 44px; border-radius: 10px; text-decoration: none;
-  background: linear-gradient(180deg, #e2c48a, var(--gold)); color: var(--bg); font-family: Cinzel, Georgia, serif;
-  font-size: 20px; letter-spacing: .18em; box-shadow: 0 0 0 1px rgba(255,226,160,.4), 0 10px 30px rgba(201,164,92,.25);
-  transition: transform .15s ease, box-shadow .15s ease; }
+.actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: stretch; gap: 14px; margin-top: 32px; }
+.enter, .about { display: inline-flex; flex-direction: column; justify-content: center; border-radius: 10px; text-decoration: none;
+  font-family: var(--title); letter-spacing: .16em; transition: transform .15s ease, box-shadow .15s ease, background .15s ease; }
+.enter { padding: 16px 40px; background: linear-gradient(180deg, #e2c48a, var(--gold)); color: var(--bg); font-size: 20px;
+  box-shadow: 0 0 0 1px rgba(255,226,160,.4), 0 10px 30px rgba(201,164,92,.25); }
 .enter:hover, .enter:focus-visible { transform: translateY(-2px); box-shadow: 0 0 0 1px rgba(255,226,160,.6), 0 14px 36px rgba(201,164,92,.4); }
-.enter small { display: block; font-family: var(--serif); font-size: 12px; letter-spacing: .1em; margin-top: 2px; opacity: .8; }
+.about { padding: 14px 28px; border: 1px solid rgba(201,164,92,.6); color: var(--gold2); font-size: 15px; background: rgba(201,164,92,.06); }
+.about:hover, .about:focus-visible { background: rgba(201,164,92,.14); transform: translateY(-2px); }
+.enter:focus-visible, .about:focus-visible { outline: 2px solid var(--gold2); outline-offset: 3px; }
 .tips { margin: 18px auto 0; font-size: 13px; color: var(--muted); line-height: 1.9; }
 .divider { border: 0; height: 1px; margin: 0 0 48px; background: linear-gradient(90deg, transparent, var(--line), transparent); }
-header { text-align: center; padding: 0 0 28px; }
-header img { width: 64px; height: 64px; }
-header .brand { font-size: 13px; color: var(--muted); margin-top: 6px; }
-header h1 { font-family: Cinzel, Georgia, serif; font-weight: 400; letter-spacing: .16em;
-  font-size: clamp(26px, 6vw, 40px); margin: 10px 0 0; line-height: 1.3; }
-header .ja { font-size: 15px; color: var(--gold2); letter-spacing: .3em; margin-top: 4px; }
-header .lead { max-width: 620px; margin: 22px auto 0; font-size: 15px; color: #d6d0c4; }
+
+/* 出品受付 */
+.submit-head { text-align: center; padding: 0 0 28px; scroll-margin-top: 24px; }
+.submit-head h2 { font-family: var(--title); font-weight: 400; font-size: clamp(24px, 6vw, 34px); letter-spacing: .16em; margin: 0; }
+.submit-head .lead { max-width: 620px; margin: 16px auto 0; font-size: 15px; color: var(--soft); }
 .rule { width: 120px; height: 1px; margin: 22px auto 0; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
 
 .notice { margin: 8px auto 36px; max-width: 720px; border: 1px solid rgba(201,164,92,.55); border-radius: 10px;
   background: rgba(201,164,92,.08); padding: 12px 18px; font-size: 14px; display: flex; gap: 12px; align-items: flex-start; }
 .notice b { color: var(--gold2); white-space: nowrap; }
 
-h2 { font-weight: 400; font-size: 20px; margin: 0 0 16px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-h2 .en { font-size: 13px; color: var(--gold); }
+h3.sec { font-weight: 400; font-size: 20px; margin: 0 0 16px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 section { margin-bottom: 48px; }
 
 .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .card { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 22px 20px;
   display: flex; flex-direction: column; gap: 10px; }
 .card .icon { width: 44px; height: 44px; color: var(--gold); }
-.card h3 { margin: 0; font-weight: 400; font-size: 20px; }
-.card h3 small { display: block; font-family: Cinzel, Georgia, serif; font-size: 12px; letter-spacing: .14em; color: var(--muted); }
+.card h4 { margin: 0; font-weight: 400; font-size: 20px; }
+.card h4 small { display: block; font-family: var(--title); font-size: 12px; letter-spacing: .14em; color: var(--muted); }
+.card p { margin: 0; font-size: 14px; color: var(--soft); }
 .card dl { margin: 4px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 14px; }
 .card dt { color: var(--muted); white-space: nowrap; }
 .card dd { margin: 0; }
 .card .btn { margin-top: auto; }
-.btn { display: block; text-align: center; padding: 12px 18px; border-radius: 8px; font-size: 15px; text-decoration: none;
-  background: var(--gold); color: var(--bg); font-family: inherit; border: 0; letter-spacing: .08em; }
-.btn[aria-disabled="true"] { background: transparent; color: var(--muted); border: 1px dashed var(--line); cursor: not-allowed; }
+.btn { display: block; text-align: center; padding: 12px 18px; border-radius: 8px; font-size: 15px; text-decoration: none; letter-spacing: .04em; }
+.btn[aria-disabled="true"] { color: var(--muted); border: 1px dashed var(--line); cursor: not-allowed; }
 .badge { position: absolute; top: 16px; right: 16px; font-size: 12px; padding: 2px 10px; border-radius: 99px;
   border: 1px solid var(--line); color: var(--muted); }
 
 .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; counter-reset: s; }
 .steps li { counter-increment: s; background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: 10px;
-  padding: 14px 10px 12px; text-align: center; font-size: 14px; }
-.steps li::before { content: counter(s); display: block; font-family: Cinzel, Georgia, serif; color: var(--gold); font-size: 20px; line-height: 1.4; }
-.steps li span { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 4px; }
+  padding: 14px 8px 12px; text-align: center; font-size: 14px; line-height: 1.5; }
+.steps li::before { content: counter(s); display: block; font-family: var(--title); color: var(--gold); font-size: 20px; line-height: 1.6; }
+.steps li span { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
 
 .rooms { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .room { border-left: 2px solid var(--gold); padding: 4px 0 4px 16px; font-size: 14px; }
-.room h3 { margin: 0 0 4px; font-weight: 400; font-size: 17px; }
-.room p { margin: 0; color: #d6d0c4; }
+.room h4 { margin: 0 0 4px; font-weight: 400; font-size: 17px; }
+.room p { margin: 0; color: var(--soft); }
 
-.rules { margin: 0; padding-left: 1.3em; font-size: 14px; color: #d6d0c4; }
+.rules { margin: 0; padding-left: 1.3em; font-size: 14px; color: var(--soft); }
 .rules li { margin-bottom: 6px; }
 
 footer { border-top: 1px solid var(--line); padding: 26px 0 40px; text-align: center; font-size: 13px; color: var(--muted); }
 footer .back { display: inline-block; margin-bottom: 14px; }
 
 @media (max-width: 720px) {
-  header { padding-top: 32px; }
+  .hero { padding-top: 64px; }
   .cards, .rooms { grid-template-columns: 1fr; }
   .steps { grid-template-columns: repeat(3, 1fr); }
   .notice { flex-direction: column; gap: 2px; }
+  .actions { flex-direction: column; align-items: stretch; max-width: 360px; margin-left: auto; margin-right: auto; }
 }
 @media (max-width: 380px) { .steps { grid-template-columns: repeat(2, 1fr); } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .enter, .about { transition: none; } }
 </style>
 </head>
 <body>
+<div class="lang">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+    <circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>
+  <select id="lang" aria-label="Language">
+    <option value="en">English</option>
+    <option value="ja">日本語</option>
+    <option value="de">Deutsch</option>
+  </select>
+</div>
+
 <div class="wrap">
   <section class="hero" aria-labelledby="title">
-    <img class="logo" src="/static/brand/icon-512.png" alt="">
+    <img class="logo" src="/static/brand/top-icon.png" alt="">
     <h1 id="title">OMNIGALLERY</h1>
     <div class="sub">VIRTUAL MUSEUM</div>
-    <div class="ja">ブラウザで歩ける、バーチャル美術館</div>
-    <img class="visual" src="/static/brand/og-image.png" alt="館内に飾られた名画 (真珠の耳飾りの少女・星月夜・神奈川沖浪裏)">
-    <a class="enter" href="/game/" id="enter">ENTER THE MUSEUM<small>美術館に入る</small></a>
-    <p class="tips">インストール不要・無料。音が出ます。<br>
-      PC: マウスで見回し、WASD で移動<br>
-      スマホ: 左下のスティックで移動、画面をなぞって見回し</p>
+    <div class="tagline" data-i18n="tagline">A virtual museum you can walk through in your browser</div>
+    <img class="visual" src="/static/brand/og-image.png" alt="" data-i18n-alt="visualAlt">
+    <div class="actions">
+      <a class="enter" href="/game/" id="enter" data-i18n="enter">ENTER THE MUSEUM</a>
+      <a class="about" href="#submit" data-i18n="about">ABOUT SUBMISSIONS</a>
+    </div>
+    <p class="tips" data-i18n-html="tips">Free, no installation needed. Sound on.<br>
+      PC: look around with the mouse, move with WASD<br>
+      Phone: move with the stick at the lower left, swipe to look around</p>
   </section>
 
   <hr class="divider">
 
-  <header id="submit">
-    <h2 class="en" style="justify-content:center;font-family:Cinzel,Georgia,serif;font-size:clamp(24px,6vw,34px);letter-spacing:.16em;margin:0">SUBMIT YOUR ART</h2>
-    <div class="ja">作品出品受付</div>
-    <p class="lead">あなたの作品を、照明と空間のある美術館に展示しませんか。<br>
-      画像・動画・3D モデルを受け付けています。審査のあと、館内の展示室に飾られます。</p>
+  <header class="submit-head" id="submit">
+    <h2>SUBMIT YOUR ART</h2>
+    <p class="lead" data-i18n-html="lead">Show your work in a museum with real lighting and space.<br>
+      We welcome images, videos and 3D models. After review, your work is hung in one of our galleries.</p>
     <div class="rule"></div>
   </header>
 
   <div class="notice" role="note">
-    <b>準備中</b>
-    <span>出品の受付は現在準備中です。受付開始までもうしばらくお待ちください。このページでは出品できる作品の種類と流れをご案内しています。</span>
+    <b data-i18n="soon">Coming soon</b>
+    <span data-i18n="notice">Submissions are not open yet. Please stay tuned. This page explains what you can submit and how it works.</span>
   </div>
 
   <section aria-labelledby="kind">
-    <h2 id="kind">出品する作品の種類 <span class="en">CHOOSE A TYPE</span></h2>
+    <h3 class="sec" id="kind" data-i18n="kindTitle">What you can submit</h3>
     <div class="cards">
       <article class="card">
-        <span class="badge">準備中</span>
+        <span class="badge" data-i18n="soon">Coming soon</span>
         <svg class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <rect x="6" y="9" width="36" height="30" rx="2"/><rect x="11" y="14" width="26" height="20"/>
           <path d="M11 30l7-7 6 6 4-4 9 9"/><circle cx="30" cy="19" r="2.2"/></svg>
-        <h3>平面作品<small>PAINTING · PHOTO · VIDEO</small></h3>
-        <p style="margin:0;font-size:14px;color:#d6d0c4">絵画・イラスト・写真・映像作品。額装して壁に展示します。</p>
+        <h4><span data-i18n="flatTitle">Wall works</span><small>PAINTING · PHOTO · VIDEO</small></h4>
+        <p data-i18n="flatDesc">Paintings, illustrations, photos and video works, framed and hung on the wall.</p>
         <dl>
-          <dt>画像</dt><dd>JPEG / PNG / WebP / HEIC / AVIF など</dd>
-          <dt>動画</dt><dd>MP4 / MOV / WebM など (音声なしで展示)</dd>
-          <dt>上限 (予定)</dt><dd>画像 20MB まで</dd>
+          <dt data-i18n="image">Images</dt><dd data-i18n="imageFormats">JPEG / PNG / WebP / HEIC / AVIF and more</dd>
+          <dt data-i18n="video">Videos</dt><dd data-i18n="videoFormats">MP4 / MOV / WebM and more (shown without sound)</dd>
+          <dt data-i18n="limit">Limit (planned)</dt><dd data-i18n="flatLimit">Images up to 20 MB</dd>
         </dl>
-        <a class="btn" aria-disabled="true" role="link">受付開始までお待ちください</a>
+        <a class="btn" aria-disabled="true" role="link" data-i18n="wait">Opening soon</a>
       </article>
       <article class="card">
-        <span class="badge">準備中</span>
+        <span class="badge" data-i18n="soon">Coming soon</span>
         <svg class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M24 5l16 9v20l-16 9-16-9V14z"/><path d="M8 14l16 9 16-9M24 23v20"/></svg>
-        <h3>立体作品<small>SCULPTURE · 3D MODEL</small></h3>
-        <p style="margin:0;font-size:14px;color:#d6d0c4">彫刻・フィギュア・3D モデル。台座の上でゆっくり回転させて展示します。</p>
+        <h4><span data-i18n="solidTitle">Sculptures</span><small>SCULPTURE · 3D MODEL</small></h4>
+        <p data-i18n="solidDesc">Sculptures, figures and 3D models, slowly turning on a pedestal.</p>
         <dl>
-          <dt>形式</dt><dd>glb / glTF / blend / fbx / obj / stl / ply / usdz</dd>
-          <dt>上限 (予定)</dt><dd>200MB まで (表示用の軽量版を自動で作成)</dd>
+          <dt data-i18n="formats">Formats</dt><dd>glb / glTF / blend / fbx / obj / stl / ply / usdz</dd>
+          <dt data-i18n="limit">Limit (planned)</dt><dd data-i18n="solidLimit">Up to 200 MB (a light version for display is made automatically)</dd>
         </dl>
-        <a class="btn" aria-disabled="true" role="link">受付開始までお待ちください</a>
+        <a class="btn" aria-disabled="true" role="link" data-i18n="wait">Opening soon</a>
       </article>
     </div>
   </section>
 
   <section aria-labelledby="flow">
-    <h2 id="flow">出品の流れ <span class="en">HOW IT WORKS</span></h2>
+    <h3 class="sec" id="flow" data-i18n="flowTitle">How it works</h3>
     <ol class="steps">
-      <li>種類を選ぶ<span>平面 / 立体</span></li>
-      <li>アップロード<span>形式を自動で確認</span></li>
-      <li>作品情報<span>タイトル・作者名・解説</span></li>
-      <li>展示場所の希望<span>公開ルーム / プライベート</span></li>
-      <li>審査<span>内容と権利の確認</span></li>
-      <li>展示開始<span>メールでお知らせ</span></li>
+      <li><b data-i18n="s1">Choose a type</b><span data-i18n="s1d">Wall work / sculpture</span></li>
+      <li><b data-i18n="s2">Upload</b><span data-i18n="s2d">Format checked automatically</span></li>
+      <li><b data-i18n="s3">Details</b><span data-i18n="s3d">Title, artist, description</span></li>
+      <li><b data-i18n="s4">Placement</b><span data-i18n="s4d">Public or private room</span></li>
+      <li><b data-i18n="s5">Review</b><span data-i18n="s5d">Content and rights check</span></li>
+      <li><b data-i18n="s6">On display</b><span data-i18n="s6d">We let you know by email</span></li>
     </ol>
   </section>
 
   <section aria-labelledby="rooms">
-    <h2 id="rooms">展示ルーム <span class="en">GALLERY ROOMS</span></h2>
+    <h3 class="sec" id="rooms" data-i18n="roomsTitle">Gallery rooms</h3>
     <div class="rooms">
       <div class="room">
-        <h3>一般公開ルーム</h3>
-        <p>美術館の通常の展示室です。どなたでも鑑賞できます。運営の審査を経て展示されます。</p>
+        <h4 data-i18n="publicTitle">Public rooms</h4>
+        <p data-i18n="publicDesc">The museum's main galleries, open to every visitor. Works are shown after review by our team.</p>
       </div>
       <div class="room">
-        <h3>プライベートルーム</h3>
-        <p>ルームコードを知っている人だけが入れる、あなた専用の小部屋です。館内のエレベーターの「PRIVATE」ボタンから入室します。</p>
+        <h4 data-i18n="privateTitle">Private room</h4>
+        <p data-i18n="privateDesc">Your own small room, open only to people who know its room code. Enter it with the PRIVATE button in the museum's elevator.</p>
       </div>
     </div>
   </section>
 
   <section aria-labelledby="rules">
-    <h2 id="rules">出品にあたって <span class="en">GUIDELINES</span></h2>
+    <h3 class="sec" id="rules" data-i18n="rulesTitle">Guidelines</h3>
     <ul class="rules">
-      <li>ご自身が権利を持つ作品、または展示の許可を得ている作品に限ります。キャラクター・ロゴ・他の方の作品の無断転載はお断りしています。</li>
-      <li>性的・暴力的・差別的な表現など、公序良俗に反する作品は展示できません。</li>
-      <li>写真の位置情報などのメタデータは、展示用に変換するときに自動で削除します。</li>
-      <li>審査の結果や展示開始は、ご登録のメールアドレスにお知らせします。</li>
+      <li data-i18n="r1">Only works you own the rights to, or have permission to show. No characters, logos or other people's works without permission.</li>
+      <li data-i18n="r2">Sexual, violent, discriminatory or otherwise offensive content cannot be shown.</li>
+      <li data-i18n="r3">Location data and other metadata are removed automatically when your file is converted for display.</li>
+      <li data-i18n="r4">Review results and the start of your exhibition are sent to the email address you register.</li>
     </ul>
   </section>
 
   <footer>
-    <a class="back en" href="#title">ENTER THE MUSEUM</a>
-    <div>館内の受付端末から開いた場合は、元のタブに戻ると続きから鑑賞できます。</div>
+    <a class="back en" href="#title" data-i18n="enter">ENTER THE MUSEUM</a>
+    <div data-i18n="footerNote">Opened from the kiosk in the museum? Go back to the previous tab to continue your visit.</div>
     <div class="en" style="margin-top:10px;font-size:11px">© OMNIGALLERY</div>
   </footer>
 </div>
+
+<script>
+// ページの文言 (英語が基本。右上の選択で日本語・ドイツ語に切り替え、選んだ言語は次回も使う)
+const I18N = {
+  ja: {
+    tagline: "ブラウザで歩ける、バーチャル美術館",
+    visualAlt: "館内に飾られた名画 (真珠の耳飾りの少女・星月夜・神奈川沖浪裏)",
+    enter: "美術館に入る",
+    about: "作品出品について",
+    tips: "インストール不要・無料。音が出ます。<br>PC: マウスで見回し、WASD で移動<br>スマホ: 左下のスティックで移動、画面をなぞって見回し",
+    lead: "あなたの作品を、照明と空間のある美術館に展示しませんか。<br>画像・動画・3D モデルを受け付けています。審査のあと、館内の展示室に飾られます。",
+    soon: "準備中",
+    notice: "出品の受付は現在準備中です。受付開始までもうしばらくお待ちください。このページでは出品できる作品の種類と流れをご案内しています。",
+    kindTitle: "出品できる作品",
+    flatTitle: "平面作品", flatDesc: "絵画・イラスト・写真・映像作品。額装して壁に展示します。",
+    image: "画像", imageFormats: "JPEG / PNG / WebP / HEIC / AVIF など",
+    video: "動画", videoFormats: "MP4 / MOV / WebM など (音声なしで展示)",
+    limit: "上限 (予定)", flatLimit: "画像 20MB まで",
+    wait: "受付開始までお待ちください",
+    solidTitle: "立体作品", solidDesc: "彫刻・フィギュア・3D モデル。台座の上でゆっくり回転させて展示します。",
+    formats: "形式", solidLimit: "200MB まで (表示用の軽量版を自動で作成)",
+    flowTitle: "出品の流れ",
+    s1: "種類を選ぶ", s1d: "平面 / 立体", s2: "アップロード", s2d: "形式を自動で確認",
+    s3: "作品情報", s3d: "タイトル・作者名・解説", s4: "展示場所の希望", s4d: "公開ルーム / プライベート",
+    s5: "審査", s5d: "内容と権利の確認", s6: "展示開始", s6d: "メールでお知らせ",
+    roomsTitle: "展示ルーム",
+    publicTitle: "一般公開ルーム", publicDesc: "美術館の通常の展示室です。どなたでも鑑賞できます。運営の審査を経て展示されます。",
+    privateTitle: "プライベートルーム", privateDesc: "ルームコードを知っている人だけが入れる、あなた専用の小部屋です。館内のエレベーターの「PRIVATE」ボタンから入室します。",
+    rulesTitle: "出品にあたって",
+    r1: "ご自身が権利を持つ作品、または展示の許可を得ている作品に限ります。キャラクター・ロゴ・他の方の作品の無断転載はお断りしています。",
+    r2: "性的・暴力的・差別的な表現など、公序良俗に反する作品は展示できません。",
+    r3: "写真の位置情報などのメタデータは、展示用に変換するときに自動で削除します。",
+    r4: "審査の結果や展示開始は、ご登録のメールアドレスにお知らせします。",
+    footerNote: "館内の受付端末から開いた場合は、元のタブに戻ると続きから鑑賞できます。",
+  },
+  de: {
+    tagline: "Ein virtuelles Museum, durch das Sie im Browser spazieren",
+    visualAlt: "Berühmte Gemälde im Museum (Das Mädchen mit dem Perlenohrring, Sternennacht, Die große Welle vor Kanagawa)",
+    enter: "MUSEUM BETRETEN",
+    about: "ZU DEN EINREICHUNGEN",
+    tips: "Kostenlos, ohne Installation. Mit Ton.<br>PC: Mit der Maus umsehen, mit WASD bewegen<br>Smartphone: Mit dem Stick unten links bewegen, zum Umsehen wischen",
+    lead: "Zeigen Sie Ihre Werke in einem Museum mit echtem Licht und Raum.<br>Wir nehmen Bilder, Videos und 3D-Modelle an. Nach der Prüfung wird Ihr Werk in einem unserer Säle ausgestellt.",
+    soon: "Demnächst",
+    notice: "Einreichungen sind noch nicht möglich. Bitte haben Sie noch etwas Geduld. Hier erfahren Sie, was Sie einreichen können und wie es abläuft.",
+    kindTitle: "Was Sie einreichen können",
+    flatTitle: "Wandwerke", flatDesc: "Gemälde, Illustrationen, Fotos und Videokunst – gerahmt und an die Wand gehängt.",
+    image: "Bilder", imageFormats: "JPEG / PNG / WebP / HEIC / AVIF u. a.",
+    video: "Videos", videoFormats: "MP4 / MOV / WebM u. a. (ohne Ton gezeigt)",
+    limit: "Limit (geplant)", flatLimit: "Bilder bis 20 MB",
+    wait: "Bald verfügbar",
+    solidTitle: "Skulpturen", solidDesc: "Skulpturen, Figuren und 3D-Modelle, die sich langsam auf einem Sockel drehen.",
+    formats: "Formate", solidLimit: "Bis 200 MB (eine leichte Anzeigeversion wird automatisch erstellt)",
+    flowTitle: "So funktioniert es",
+    s1: "Art wählen", s1d: "Wandwerk / Skulptur", s2: "Hochladen", s2d: "Format wird automatisch geprüft",
+    s3: "Angaben", s3d: "Titel, Künstler, Beschreibung", s4: "Ausstellungsort", s4d: "Öffentlicher oder privater Raum",
+    s5: "Prüfung", s5d: "Inhalt und Rechte", s6: "Ausstellung", s6d: "Benachrichtigung per E-Mail",
+    roomsTitle: "Ausstellungsräume",
+    publicTitle: "Öffentliche Räume", publicDesc: "Die regulären Säle des Museums, offen für alle Besucher. Werke werden nach Prüfung durch unser Team gezeigt.",
+    privateTitle: "Privater Raum", privateDesc: "Ihr eigener kleiner Raum – nur für Personen mit dem Raumcode. Zugang über die Taste PRIVATE im Aufzug des Museums.",
+    rulesTitle: "Richtlinien",
+    r1: "Nur Werke, an denen Sie die Rechte besitzen oder die Sie ausstellen dürfen. Keine Figuren, Logos oder fremden Werke ohne Erlaubnis.",
+    r2: "Sexuelle, gewalttätige, diskriminierende oder anderweitig anstößige Inhalte können nicht gezeigt werden.",
+    r3: "Standortdaten und andere Metadaten werden bei der Umwandlung für die Ausstellung automatisch entfernt.",
+    r4: "Prüfergebnisse und den Ausstellungsbeginn senden wir an die von Ihnen angegebene E-Mail-Adresse.",
+    footerNote: "Vom Terminal im Museum geöffnet? Kehren Sie zum vorherigen Tab zurück, um Ihren Besuch fortzusetzen.",
+  },
+};
+
+(function () {
+  const select = document.getElementById('lang');
+  // 英語の文言は HTML に書いてあるものを元として保存しておく
+  const base = {};
+  document.querySelectorAll('[data-i18n]').forEach(function (el) { base[el.dataset.i18n] = el.textContent.trim(); });
+  document.querySelectorAll('[data-i18n-html]').forEach(function (el) { base[el.dataset.i18nHtml] = el.innerHTML.trim(); });
+  document.querySelectorAll('[data-i18n-alt]').forEach(function (el) { base[el.dataset.i18nAlt] = el.alt; });
+  base.visualAlt = 'Famous paintings in the museum (Girl with a Pearl Earring, The Starry Night, The Great Wave off Kanagawa)';
+
+  function apply(lang) {
+    const dict = I18N[lang] || {};
+    const t = function (k) { return dict[k] || base[k]; };
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach(function (el) { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll('[data-i18n-html]').forEach(function (el) { el.innerHTML = t(el.dataset.i18nHtml); });
+    document.querySelectorAll('[data-i18n-alt]').forEach(function (el) { el.alt = t(el.dataset.i18nAlt); });
+    select.value = lang;
+  }
+
+  let lang = 'en';
+  const fromUrl = new URLSearchParams(location.search).get('lang');
+  try { lang = fromUrl || localStorage.getItem('omni_lang') || 'en'; } catch (e) { lang = fromUrl || 'en'; }
+  if (lang !== 'en' && !I18N[lang]) lang = 'en';
+  apply(lang);
+
+  select.addEventListener('change', function () {
+    apply(select.value);
+    try { localStorage.setItem('omni_lang', select.value); } catch (e) { /* 保存できなくても表示は切り替わる */ }
+  });
+})();
+</script>
 </body>
 </html>
