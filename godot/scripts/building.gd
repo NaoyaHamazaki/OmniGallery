@@ -36,6 +36,8 @@ const VOID_RECT := Rect2(10.5, -1.5, 5.0, 5.0)  # 2F 床の吹き抜け (x, z, �
 const SHAFT_RECT := Rect2(10.5, -10.0, 3.0, 3.0)  # エレベーターシャフト外形
 const SHAFT_DOOR_Z := -7.1
 const OPENING_HEIGHT := 3.4
+const SUBMIT_KIOSK_POS := Vector3(3.0, 0.0, 6.5)  # 作品出品受付の端末 (1F 入口付近)
+const SUBMIT_COLOR := Color(1.0, 0.76, 0.36)
 ## 階ごとの間仕切り壁 (x=9) の開口 [z_from, z_to]
 const PARTITION_OPENINGS := [
 	[Vector2(-6.0, -2.0), Vector2(6.0, 9.5)],
@@ -117,6 +119,7 @@ func _build_map_kiosks() -> void:
 	_create_map_viewport()
 	_map_board(Vector3(0.0, 0.0, 5.0), Vector3(SPAWN.x, 0, SPAWN.z))
 	_map_board(Vector3(16.2, FLOOR_HEIGHT, -4.0), Vector3(13.0, FLOOR_HEIGHT, -1.5))
+	_submit_kiosk(SUBMIT_KIOSK_POS, Vector3(SPAWN.x, 0, SPAWN.z))
 
 
 ## 階段・エスカレーターの乗り口。前を向いて進むと自動移動 (その間に移動先フロアを準備)
@@ -692,7 +695,7 @@ func _hanging_sign(text: String, pos: Vector3, yaw: float) -> void:
 # ---------------------------------------------------------------------------
 func _create_map_viewport() -> void:
 	map_viewport = SubViewport.new()
-	map_viewport.size = Vector2i(1200, 600)
+	map_viewport.size = MAP_SIZE
 	map_viewport.disable_3d = true
 	map_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(map_viewport)
@@ -717,6 +720,36 @@ func _map_board(pos: Vector3, toward: Vector3) -> void:
 	add_map_item(f, Rect2(pos.x - 0.4, pos.z - 0.4, 0.8, 0.8), "map", "MAP")
 
 
+## 作品出品受付の端末 (金色)。クリックで案内モーダル → 出品サイト (/submit/) を別タブで開く
+func _submit_kiosk(pos: Vector3, toward: Vector3) -> void:
+	var kiosk := HoloKiosk.new()
+	kiosk.name = "SubmitKiosk"
+	kiosk.position = pos
+	var d := toward - pos
+	kiosk.rotation.y = atan2(d.x, d.z)
+	add_child(kiosk)
+	kiosk.setup(self, get_node_or_null("%Player"), "SUBMIT ART", "Submit your artwork",
+		func(): if _ui: _ui.open_submit_info(),
+		null, Vector2(0.9, 0.55), SUBMIT_COLOR)
+	kiosk.set_subtitle("OPEN CALL")
+	add_map_item(floor_of(pos.y), Rect2(pos.x - 0.4, pos.z - 0.4, 0.8, 0.8), "submit", "SUBMIT")
+
+
+const MAP_SIZE := Vector2i(1200, 600)
+const MAP_SIZE_PORTRAIT := Vector2i(640, 1000)
+
+
 func _open_map() -> void:
 	if _ui:
+		# 縦画面では 1F / 2F を上下に並べた縦長のマップにする (閉じたら端末用の横長に戻す)
+		_set_map_size(MAP_SIZE_PORTRAIT if _ui.portrait else MAP_SIZE)
 		_ui.show_modal("Floor Map", "", map_viewport.get_texture(), true)
+		if _ui.portrait:
+			_ui.modal_closed.connect(_set_map_size.bind(MAP_SIZE), CONNECT_ONE_SHOT)
+
+
+func _set_map_size(s: Vector2i) -> void:
+	map_viewport.size = s
+	for c in map_viewport.get_children():
+		if c is Control:
+			c.size = Vector2(s)

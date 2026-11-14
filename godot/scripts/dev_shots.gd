@@ -20,6 +20,7 @@ const VIEWS := [
 	["04_atrium_ramps", Vector3(9.9, 0.0, 9.4), Vector3(13.5, 2.6, 0.0)],
 	["05_map_board", Vector3(-1.4, 0.0, 7.0), Vector3(0.0, 1.5, 5.0)],
 	["05b_map_board_far", Vector3(-3.0, 0.0, 9.5), Vector3(0.0, 1.3, 5.0)],
+	["05c_submit_kiosk", Vector3(1.4, 0.0, 8.0), Vector3(3.0, 1.4, 6.5)],
 	["06_debug_terminal", Vector3(-4.6, 0.0, 6.6), Vector3(-6.0, 1.3, 5.0)],
 	["07_2f_landing_elevator", Vector3(12.5, 5.5, -2.2), Vector3(12.0, 6.8, -7.1)],
 	["08_2f_gallery_eyestop", Vector3(8.0, 5.5, -4.0), Vector3(-15.0, 7.5, -4.0)],
@@ -29,6 +30,7 @@ const VIEWS := [
 
 var out_dir := ""
 var selftest := false
+var touch := false
 var only := ""  # --only=<名前の先頭> : その視点だけ撮る (作品追加時の部分確認用)
 
 
@@ -38,6 +40,8 @@ func _ready() -> void:
 			out_dir = arg.trim_prefix("--shots=")
 		if arg == "--selftest":
 			selftest = true
+		if arg == "--touch":  # スマホの画面 (スティック・MENU ボタン) で撮る
+			touch = true
 		if arg.begins_with("--only="):
 			only = arg.trim_prefix("--only=")
 	if out_dir == "" and not selftest:
@@ -100,6 +104,21 @@ func run_selftest(gm: Node) -> void:
 	results.append(["outer wall blocks", p.global_position.x > Building.X_MIN, p.global_position])
 	# 7. タイムアタック: ゲートからコースへ → 自動運転で 1 周 → ランキング登録 → 美術館へ戻る
 	var ta: TimeAttack = gm.get_node("%TimeAttack")
+	if TimeAttack.ENABLED:
+		await _selftest_course(gm, taxi, ta, results)
+	else:
+		print("[selftest] SKIP  time attack (closed: TimeAttack.ENABLED = false)")
+	taxi.teleport(start, 0.0)
+
+	var ok := true
+	for r in results:
+		print("[selftest] %s  %s  pos=%s" % ["PASS" if r[1] else "FAIL", r[0], r[2]])
+		ok = ok and r[1]
+	print("[selftest] RESULT: %s" % ("ALL PASS" if ok else "FAILED"))
+	get_tree().quit(0 if ok else 1)
+
+
+func _selftest_course(gm: Node, taxi: Taxi, ta: TimeAttack, results: Array) -> void:
 	taxi._enter()
 	taxi.teleport(Vector3(Outdoor.GATE_X, Outdoor.GROUND_Y + 0.05, Outdoor.LOT_Z - 3.0), PI)  # 南 (ゲート) を向く
 	Input.action_press("move_forward")
@@ -125,14 +144,6 @@ func run_selftest(gm: Node) -> void:
 	await ta.exit_course()
 	results.append(["back to museum parking", not ta.active and taxi.global_position.z < Outdoor.LOT_Z, taxi.global_position])
 	taxi.leave()
-	taxi.teleport(start, 0.0)
-
-	var ok := true
-	for r in results:
-		print("[selftest] %s  %s  pos=%s" % ["PASS" if r[1] else "FAIL", r[0], r[2]])
-		ok = ok and r[1]
-	print("[selftest] RESULT: %s" % ("ALL PASS" if ok else "FAILED"))
-	get_tree().quit(0 if ok else 1)
 
 
 ## 次のチェックポイントへ向かう簡易自動運転 (戻り値はスティック入力と同じ形式)
@@ -179,6 +190,8 @@ func run(gm: Node) -> void:
 	var player: CharacterBody3D = gm.player
 	var head: Node3D = player.get_node("Head")
 	player.set_physics_process(false)
+	if touch:
+		gm.ui.touch_controls._set_active(true)
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)  # FPS 計測のため
 	for v in VIEWS:
 		if only != "" and not str(v[0]).begins_with(only):
@@ -197,7 +210,7 @@ func run(gm: Node) -> void:
 			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)])
 		_save(v[0])
 	# 投稿テスト作品: 高品質版に差し替えて同じ視点で撮る
-	if gm._models.has("upload-test-01"):
+	if gm._models.has("upload-test-01") and only == "":
 		player.global_position = Vector3(-6.5, 0.0, 0.5)
 		var d: Vector3 = Vector3(-3.0, 2.0, -3.5) - (player.global_position + Vector3(0, 1.55, 0))
 		player.rotation.y = atan2(-d.x, -d.z)
@@ -205,10 +218,16 @@ func run(gm: Node) -> void:
 		await gm._on_ui_action("hq:upload-test-01")
 		await _wait(1.0)
 		_save("02b_upload_test_hq")
-	if only != "":
+	if only != "" and only != "modals":  # --only=modals: 視点は撮らずモーダルだけ撮る
 		get_tree().quit()
 		return
-	# タイムアタックのコース
+	# タイムアタックのコース (閉鎖中は撮らない)
+	if TimeAttack.ENABLED:
+		await _shots_course(gm, player)
+	await _save_modals(gm)
+
+
+func _shots_course(gm: Node, player: CharacterBody3D) -> void:
 	player.set_physics_process(true)
 	var taxi: Taxi = gm.outdoor.get_node("Taxi")
 	var ta: TimeAttack = gm.get_node("%TimeAttack")
@@ -233,7 +252,10 @@ func run(gm: Node) -> void:
 	await ta.exit_course()
 	taxi.leave()
 	player.set_physics_process(false)
-	# モーダル (作品説明・フロアマップ・デバッグ情報)
+
+
+## モーダル (作品説明・フロアマップ・出品受付・メニュー・デバッグ情報)
+func _save_modals(gm: Node) -> void:
 	var b: Building = gm.building
 	for c in gm.find_children("Painting_starry-night", "", false, false):
 		var body: Node = c.get_child(c.get_child_count() - 1)
@@ -244,6 +266,15 @@ func run(gm: Node) -> void:
 	b._open_map()
 	await _frames(15)
 	_save("12_modal_map")
+	gm.ui.close_modal()
+	await _frames(5)
+	gm.ui.open_submit_info()
+	await _frames(15)
+	_save("12b_modal_submit")
+	gm.ui.close_modal()
+	gm.ui.open_menu()
+	await _frames(15)
+	_save("12c_modal_menu")
 	gm.ui.close_modal()
 	var term := gm.get_node_or_null("DebugTerminal")
 	if term:

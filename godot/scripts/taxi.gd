@@ -281,6 +281,11 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	# 縦画面では追従カメラも幅基準 (前方の道が見えるように)
+	var vp := get_viewport().get_visible_rect().size
+	var portrait := vp.y > vp.x
+	_cam.keep_aspect = Camera3D.KEEP_WIDTH if portrait else Camera3D.KEEP_HEIGHT
+	_cam.fov = 80.0 if portrait else 70.0
 	if not driving:
 		return
 	# 後方から追いかけるカメラ

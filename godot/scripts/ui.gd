@@ -6,6 +6,8 @@ extends CanvasLayer
 signal modal_closed
 ## モーダル本文の [url=omni:...] リンクが押された (gallery_manager が処理する)
 signal action_requested(action: String)
+## 画面の向きが変わった (縦画面 = true)
+signal orientation_changed(portrait: bool)
 
 const GOLD := Color(0.79, 0.64, 0.36)
 
@@ -23,6 +25,13 @@ var _loading_bar: ProgressBar
 var _loading_label: Label
 var _loading_pct: Label
 var _mute_button: Button
+var _content: BoxContainer  # モーダルの中身 (横画面: 画像 | 説明 / 縦画面: 画像の下に説明)
+## 縦画面 (スマホ縦持ちなど) で表示中か
+var portrait := false
+var _orientation_ready := false
+
+const BASE_LANDSCAPE := Vector2i(1280, 720)
+const BASE_PORTRAIT := Vector2i(600, 1066)  # 幅 600 基準 (スマホ縦持ちで文字が小さくなりすぎない大きさ)
 
 @onready var status_label: Label = %Status
 @onready var hover_label: Label = %Hover
@@ -37,6 +46,83 @@ func _ready() -> void:
 	_build_mute()
 	_build_modal()
 	hover_label.text = ""
+	hover_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	get_window().size_changed.connect(_check_orientation)
+	_check_orientation()
+
+
+## 画面の縦横を判定し、UI の基準解像度と配置を切り替える
+## (基準 1280x720 のままだと縦画面では幅基準で縮み、文字が小さくなりすぎるため 720x1280 にする)
+func _check_orientation() -> void:
+	var s := get_window().size
+	var p := s.y > s.x
+	if p == portrait and _orientation_ready:
+		return
+	portrait = p
+	_orientation_ready = true
+	get_window().content_scale_size = BASE_PORTRAIT if p else BASE_LANDSCAPE
+	_layout_for_orientation()
+	orientation_changed.emit(p)
+
+
+func _layout_for_orientation() -> void:
+	if portrait:
+		# 上から: 読み込みバー → 場所表示 (左) と MENU (右) → 状態表示
+		floor_label.anchor_left = 0.0
+		floor_label.anchor_right = 1.0
+		floor_label.offset_left = 16
+		floor_label.offset_right = -190
+		floor_label.offset_top = 60
+		floor_label.offset_bottom = 88
+		floor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		status_label.offset_top = 96
+		status_label.offset_bottom = 124
+		status_label.offset_right = 420
+		status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		hover_label.offset_left = -280
+		hover_label.offset_right = 280
+		hover_label.offset_bottom = 48
+		_menu_button.offset_top = 56
+		_menu_button.offset_bottom = 116
+		_panel.anchor_left = 0.035
+		_panel.anchor_right = 0.965
+		_panel.anchor_top = 0.05
+		_panel.anchor_bottom = 0.95
+		_content.vertical = true
+		var help: Label = get_node_or_null("%Help")
+		if help:  # PC の縦長ウィンドウ用 (スマホでは非表示)
+			help.anchor_right = 1.0
+			help.offset_right = -16
+			help.offset_top = -96
+			help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	else:
+		floor_label.anchor_left = 1.0
+		floor_label.anchor_right = 1.0
+		floor_label.offset_left = -520
+		floor_label.offset_right = -16
+		floor_label.offset_top = 12
+		floor_label.offset_bottom = 40
+		floor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		status_label.offset_top = 12
+		status_label.offset_bottom = 40
+		status_label.offset_right = 600
+		status_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+		hover_label.offset_left = -400
+		hover_label.offset_right = 400
+		hover_label.offset_bottom = 16
+		_menu_button.offset_top = 50
+		_menu_button.offset_bottom = 110
+		_panel.anchor_left = 0.07
+		_panel.anchor_right = 0.93
+		_panel.anchor_top = 0.07
+		_panel.anchor_bottom = 0.93
+		_content.vertical = false
+		var help: Label = get_node_or_null("%Help")
+		if help:
+			help.anchor_right = 0.0
+			help.offset_right = 1200
+			help.offset_top = -40
+			help.autowrap_mode = TextServer.AUTOWRAP_OFF
 
 
 func is_modal_open() -> bool:
@@ -261,7 +347,7 @@ func open_menu() -> void:
 	box.add_theme_constant_override("separation", 18)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 16)
+	row.add_theme_constant_override("separation", 10 if portrait else 16)
 	var audio: GalleryAudio = get_node_or_null("%Audio")
 	var sound := _big_button("SOUND: %s" % ("OFF" if audio and audio.muted else "ON"))
 	sound.pressed.connect(func():
@@ -283,8 +369,8 @@ func open_menu() -> void:
 	help.add_theme_font_size_override("normal_font_size", 22)
 	help.add_theme_color_override("default_color", Color(0.9, 0.88, 0.84))
 	help.text = "[color=#c9a45c]HOW TO PLAY[/color]\n" \
-		+ "Left side of the screen  -  move (virtual stick)\n" \
-		+ "Right side  -  drag to look around\n" \
+		+ ("Lower left of the screen" if portrait else "Left side of the screen") + "  -  move (virtual stick)\n" \
+		+ ("Anywhere else" if portrait else "Right side") + "  -  drag to look around\n" \
 		+ "Tap  -  view an artwork / press a button (within 2 m)\n" \
 		+ "Stairs & escalators  -  walk on a little and you will be carried\n" \
 		+ "Elevator  -  tap the call button, then the floor button inside\n\n" \
@@ -306,6 +392,59 @@ func _big_button(text: String) -> Button:
 	b.add_theme_font_override("font", GalleryFonts.title())
 	b.add_theme_font_size_override("font_size", 22)
 	return b
+
+
+## 作品出品受付の案内 (館内の受付端末から)。ボタンで出品サイトを別タブで開く
+func open_submit_info() -> void:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 20)
+	var text := RichTextLabel.new()
+	text.bbcode_enabled = true
+	text.fit_content = true
+	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text.add_theme_font_size_override("normal_font_size", 22)
+	text.add_theme_color_override("default_color", Color(0.9, 0.88, 0.84))
+	text.text = "[color=#e2c48a]Show your work in OmniGallery.[/color]
+" 		+ "Paintings, photos, videos and 3D sculptures are welcome. " 		+ "Each submission is reviewed before it goes on display.
+
+" 		+ "[color=#9a96a0]-  Only works you own or have permission to show
+" 		+ "-  The submission page opens in a new tab - the museum stays open here
+" 		+ "-  Submissions are not open yet (preparing)[/color]"
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.add_child(text)
+	box.add_child(scroll)
+	var go := _big_button("OPEN THE SUBMISSION PAGE")
+	go.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var st := StyleBoxFlat.new()
+	st.bg_color = GOLD
+	st.set_corner_radius_all(10)
+	st.set_content_margin_all(12)
+	for s in ["normal", "hover", "pressed"]:
+		go.add_theme_stylebox_override(s, st)
+	go.add_theme_color_override("font_color", Color(0.12, 0.14, 0.2))
+	go.add_theme_color_override("font_hover_color", Color(0.05, 0.06, 0.1))
+	go.pressed.connect(func():
+		open_external("/submit/")
+		close_modal())
+	box.add_child(go)
+	show_custom("Submit Your Artwork", box)
+
+
+## 外部ページを別タブで開く。Web は window.open (ブロックされたら同じタブで移動)、デスクトップは既定のブラウザ
+func open_external(path: String) -> void:
+	if OS.has_feature("web"):
+		JavaScriptBridge.eval("""
+			(function (u) {
+				if (document.fullscreenElement) { document.exitFullscreen().catch(function(){}); }
+				var w = window.open(u, '_blank');
+				if (w) { w.opener = null; } else { window.location.href = u; }
+			})(%s);
+		""" % JSON.stringify(path), true)
+	else:
+		var api = get_node_or_null("%Api")
+		OS.shell_open(api.resolve(path) if api else "http://127.0.0.1:8000" + path)
 
 
 func toggle_fullscreen() -> void:
@@ -371,7 +510,7 @@ func show_custom(title: String, content: Control) -> void:
 	_image.visible = false
 	_scroll.visible = false
 	_custom.add_child(content)
-	content.set_anchors_preset(Control.PRESET_FULL_RECT)
+	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_custom.visible = true
 	_open()
 
@@ -473,10 +612,11 @@ func _build_modal() -> void:
 	line.custom_minimum_size = Vector2(0, 2)
 	vbox.add_child(line)
 
-	var content := HBoxContainer.new()
+	var content := BoxContainer.new()
 	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_theme_constant_override("separation", 26)
 	vbox.add_child(content)
+	_content = content
 
 	_image = TextureRect.new()
 	_image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE

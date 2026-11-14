@@ -9,6 +9,9 @@ extends Node3D
 
 enum State { IDLE, COUNTDOWN, RUNNING, FINISHED }
 
+## 機能の公開スイッチ。false = 閉鎖中 (隠し入口の生け垣はタクシーでも通れず、コースにも入れない)
+## コース・ランキングのコードと API は残してあるので、true に戻せば再開できる
+const ENABLED := false
 const ORIGIN := Vector3(0, 0, 1000)
 const ROAD_W := 7.0
 const CP_RADIUS := 8.0
@@ -366,14 +369,15 @@ func _build_hud() -> void:
 	_hud.add_child(_time_label)
 	_info_label = _label(16)
 	_info_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_info_label.offset_left = -400
-	_info_label.offset_right = 400
+	_info_label.offset_left = -280
+	_info_label.offset_right = 280
+	_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_info_label.offset_top = 112
 	_hud.add_child(_info_label)
 	_center_label = _label(110)
 	_center_label.set_anchors_preset(Control.PRESET_CENTER)
-	_center_label.offset_left = -400
-	_center_label.offset_right = 400
+	_center_label.offset_left = -280
+	_center_label.offset_right = 280
 	_center_label.offset_top = -90
 	_center_label.offset_bottom = 60
 	_hud.add_child(_center_label)

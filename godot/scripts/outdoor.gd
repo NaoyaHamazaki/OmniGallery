@@ -80,7 +80,7 @@ func _physics_process(delta: float) -> void:
 func _update_gate(_delta: float) -> void:
 	var taxi: Taxi = get_node_or_null("Taxi")
 	var ta: TimeAttack = get_tree().current_scene.get_node_or_null("%TimeAttack")
-	if taxi == null or ta == null or ta.active or not taxi.driving:
+	if not TimeAttack.ENABLED or taxi == null or ta == null or ta.active or not taxi.driving:
 		return
 	# 運転中に隠し入口の生け垣へ突っ込んだらコースへ
 	var p := taxi.global_position
@@ -507,5 +507,5 @@ func _build_gate(_g0: float, _g1: float) -> void:
 	_gate_body.position = Vector3(GATE_X, 0, LOT_Z)
 	add_child(_gate_body)
 	var taxi: Taxi = get_node_or_null("Taxi")
-	if taxi:
+	if taxi and TimeAttack.ENABLED:  # 閉鎖中はタクシーもすり抜けられない
 		taxi.add_collision_exception_with(_gate_body)

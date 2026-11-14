@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>作品出品受付 | OmniGallery</title>
+<meta name="description" content="OmniGallery に あなたの作品を展示しませんか。画像・動画・3D モデルの出品受付ページです。">
+<meta name="theme-color" content="#1f2433">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png">
+<style>
+@font-face { font-family: Cinzel; src: url('/static/brand/fonts/Cinzel.ttf'); font-display: swap; }
+:root {
+  --bg: #1f2433; --bg2: #151824; --panel: #262c3d; --line: #3a4157;
+  --text: #ece6da; --muted: #9a96a0; --gold: #c9a45c; --gold2: #e2c48a;
+  --serif: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", Georgia, serif;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; color: var(--text); font-family: var(--serif); line-height: 1.8;
+  background: radial-gradient(ellipse at 50% -10%, #2f374e, var(--bg) 45%, var(--bg2)) fixed;
+  min-height: 100vh;
+}
+a { color: var(--gold2); }
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+.en { font-family: Cinzel, Georgia, serif; letter-spacing: .14em; }
+
+header { text-align: center; padding: 48px 0 28px; }
+header img { width: 64px; height: 64px; }
+header .brand { font-size: 13px; color: var(--muted); margin-top: 6px; }
+header h1 { font-family: Cinzel, Georgia, serif; font-weight: 400; letter-spacing: .16em;
+  font-size: clamp(26px, 6vw, 40px); margin: 10px 0 0; line-height: 1.3; }
+header .ja { font-size: 15px; color: var(--gold2); letter-spacing: .3em; margin-top: 4px; }
+header .lead { max-width: 620px; margin: 22px auto 0; font-size: 15px; color: #d6d0c4; }
+.rule { width: 120px; height: 1px; margin: 22px auto 0; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+
+.notice { margin: 8px auto 36px; max-width: 720px; border: 1px solid rgba(201,164,92,.55); border-radius: 10px;
+  background: rgba(201,164,92,.08); padding: 12px 18px; font-size: 14px; display: flex; gap: 12px; align-items: flex-start; }
+.notice b { color: var(--gold2); white-space: nowrap; }
+
+h2 { font-weight: 400; font-size: 20px; margin: 0 0 16px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+h2 .en { font-size: 13px; color: var(--gold); }
+section { margin-bottom: 48px; }
+
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.card { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 22px 20px;
+  display: flex; flex-direction: column; gap: 10px; }
+.card .icon { width: 44px; height: 44px; color: var(--gold); }
+.card h3 { margin: 0; font-weight: 400; font-size: 20px; }
+.card h3 small { display: block; font-family: Cinzel, Georgia, serif; font-size: 12px; letter-spacing: .14em; color: var(--muted); }
+.card dl { margin: 4px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 14px; }
+.card dt { color: var(--muted); white-space: nowrap; }
+.card dd { margin: 0; }
+.card .btn { margin-top: auto; }
+.btn { display: block; text-align: center; padding: 12px 18px; border-radius: 8px; font-size: 15px; text-decoration: none;
+  background: var(--gold); color: var(--bg); font-family: inherit; border: 0; letter-spacing: .08em; }
+.btn[aria-disabled="true"] { background: transparent; color: var(--muted); border: 1px dashed var(--line); cursor: not-allowed; }
+.badge { position: absolute; top: 16px; right: 16px; font-size: 12px; padding: 2px 10px; border-radius: 99px;
+  border: 1px solid var(--line); color: var(--muted); }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; counter-reset: s; }
+.steps li { counter-increment: s; background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px 10px 12px; text-align: center; font-size: 14px; }
+.steps li::before { content: counter(s); display: block; font-family: Cinzel, Georgia, serif; color: var(--gold); font-size: 20px; line-height: 1.4; }
+.steps li span { display: block; color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 4px; }
+
+.rooms { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.room { border-left: 2px solid var(--gold); padding: 4px 0 4px 16px; font-size: 14px; }
+.room h3 { margin: 0 0 4px; font-weight: 400; font-size: 17px; }
+.room p { margin: 0; color: #d6d0c4; }
+
+.rules { margin: 0; padding-left: 1.3em; font-size: 14px; color: #d6d0c4; }
+.rules li { margin-bottom: 6px; }
+
+footer { border-top: 1px solid var(--line); padding: 26px 0 40px; text-align: center; font-size: 13px; color: var(--muted); }
+footer .back { display: inline-block; margin-bottom: 14px; }
+
+@media (max-width: 720px) {
+  header { padding-top: 32px; }
+  .cards, .rooms { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: repeat(3, 1fr); }
+  .notice { flex-direction: column; gap: 2px; }
+}
+@media (max-width: 380px) { .steps { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="/static/brand/icon-512.png" alt="">
+    <div class="brand en">OMNIGALLERY</div>
+    <h1>SUBMIT YOUR ART</h1>
+    <div class="ja">作品出品受付</div>
+    <p class="lead">あなたの作品を、照明と空間のある美術館に展示しませんか。<br>
+      画像・動画・3D モデルを受け付けています。審査のあと、館内の展示室に飾られます。</p>
+    <div class="rule"></div>
+  </header>
+
+  <div class="notice" role="note">
+    <b>準備中</b>
+    <span>出品の受付は現在準備中です。受付開始までもうしばらくお待ちください。このページでは出品できる作品の種類と流れをご案内しています。</span>
+  </div>
+
+  <section aria-labelledby="kind">
+    <h2 id="kind">出品する作品の種類 <span class="en">CHOOSE A TYPE</span></h2>
+    <div class="cards">
+      <article class="card">
+        <span class="badge">準備中</span>
+        <svg class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <rect x="6" y="9" width="36" height="30" rx="2"/><rect x="11" y="14" width="26" height="20"/>
+          <path d="M11 30l7-7 6 6 4-4 9 9"/><circle cx="30" cy="19" r="2.2"/></svg>
+        <h3>平面作品<small>PAINTING · PHOTO · VIDEO</small></h3>
+        <p style="margin:0;font-size:14px;color:#d6d0c4">絵画・イラスト・写真・映像作品。額装して壁に展示します。</p>
+        <dl>
+          <dt>画像</dt><dd>JPEG / PNG / WebP / HEIC / AVIF など</dd>
+          <dt>動画</dt><dd>MP4 / MOV / WebM など (音声なしで展示)</dd>
+          <dt>上限 (予定)</dt><dd>画像 20MB まで</dd>
+        </dl>
+        <a class="btn" aria-disabled="true" role="link">受付開始までお待ちください</a>
+      </article>
+      <article class="card">
+        <span class="badge">準備中</span>
+        <svg class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M24 5l16 9v20l-16 9-16-9V14z"/><path d="M8 14l16 9 16-9M24 23v20"/></svg>
+        <h3>立体作品<small>SCULPTURE · 3D MODEL</small></h3>
+        <p style="margin:0;font-size:14px;color:#d6d0c4">彫刻・フィギュア・3D モデル。台座の上でゆっくり回転させて展示します。</p>
+        <dl>
+          <dt>形式</dt><dd>glb / glTF / blend / fbx / obj / stl / ply / usdz</dd>
+          <dt>上限 (予定)</dt><dd>200MB まで (表示用の軽量版を自動で作成)</dd>
+        </dl>
+        <a class="btn" aria-disabled="true" role="link">受付開始までお待ちください</a>
+      </article>
+    </div>
+  </section>
+
+  <section aria-labelledby="flow">
+    <h2 id="flow">出品の流れ <span class="en">HOW IT WORKS</span></h2>
+    <ol class="steps">
+      <li>種類を選ぶ<span>平面 / 立体</span></li>
+      <li>アップロード<span>形式を自動で確認</span></li>
+      <li>作品情報<span>タイトル・作者名・解説</span></li>
+      <li>展示場所の希望<span>公開ルーム / プライベート</span></li>
+      <li>審査<span>内容と権利の確認</span></li>
+      <li>展示開始<span>メールでお知らせ</span></li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="rooms">
+    <h2 id="rooms">展示ルーム <span class="en">GALLERY ROOMS</span></h2>
+    <div class="rooms">
+      <div class="room">
+        <h3>一般公開ルーム</h3>
+        <p>美術館の通常の展示室です。どなたでも鑑賞できます。運営の審査を経て展示されます。</p>
+      </div>
+      <div class="room">
+        <h3>プライベートルーム</h3>
+        <p>ルームコードを知っている人だけが入れる、あなた専用の小部屋です。館内のエレベーターの「PRIVATE」ボタンから入室します。</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="rules">
+    <h2 id="rules">出品にあたって <span class="en">GUIDELINES</span></h2>
+    <ul class="rules">
+      <li>ご自身が権利を持つ作品、または展示の許可を得ている作品に限ります。キャラクター・ロゴ・他の方の作品の無断転載はお断りしています。</li>
+      <li>性的・暴力的・差別的な表現など、公序良俗に反する作品は展示できません。</li>
+      <li>写真の位置情報などのメタデータは、展示用に変換するときに自動で削除します。</li>
+      <li>審査の結果や展示開始は、ご登録のメールアドレスにお知らせします。</li>
+    </ul>
+  </section>
+
+  <footer>
+    <a class="back en" href="/game/">BACK TO THE MUSEUM</a>
+    <div>美術館から開いた場合は、元のタブに戻ると続きから鑑賞できます。</div>
+    <div class="en" style="margin-top:10px;font-size:11px">© OMNIGALLERY</div>
+  </footer>
+</div>
+</body>
+</html>

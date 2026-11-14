@@ -8,6 +8,7 @@
     GET  /api/artworks       作品一覧 (絵画 + 3Dモデル)
     GET  /api/debug/info     構成情報 (OMNI_DEBUG=1 のときのみ)
     GET  /static/...         作品画像 / glb モデル / 内装テクスチャ / アイコン・OGP画像
+    GET  /submit/            作品出品受付のトップページ (pages/submit.html。館内の受付端末から別タブで開く)
     GET  /game/              Godot の Web エクスポート (../godot/build/web) を配信 (OGP メタタグを注入)
 
 素材は初回起動時に自動ダウンロードする (すべて CC0 / CC BY / パブリックドメイン)。
@@ -59,6 +60,7 @@ MODEL_DIR = STATIC_DIR / "models"
 VIDEO_DIR = STATIC_DIR / "videos"
 TEXTURE_DIR = STATIC_DIR / "textures"
 BRAND_DIR = STATIC_DIR / "brand"
+PAGES_DIR = BASE_DIR / "pages"
 DB_PATH = BASE_DIR / "data" / "omnigallery.db"
 WEB_BUILD_DIR = BASE_DIR.parent / "godot" / "build" / "web"
 
@@ -608,6 +610,17 @@ def bye():
         <p>ご来館ありがとうございました</p>
         <a href="/game/">ENTER AGAIN</a>"""
     )
+
+
+@app.get("/submit", include_in_schema=False)
+def submit_redirect():
+    return RedirectResponse(url="/submit/")
+
+
+@app.get("/submit/", include_in_schema=False)
+def submit_top():
+    """作品出品受付のトップページ (UGC。現在は案内のみで、アップロードは準備中)。"""
+    return HTMLResponse((PAGES_DIR / "submit.html").read_text(encoding="utf-8"), headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/favicon.ico", include_in_schema=False)

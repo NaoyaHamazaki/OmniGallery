@@ -23,11 +23,13 @@ const STYLE := {
 	"pedestal": Color("e07a3f"),
 	"map": Color("5fb0c9"),
 	"terminal": Color("9b7fd1"),
+	"submit": Color("ffc25c"),
 	"entrance": Color("7fc99b"),
 }
 const LEGEND := [
 	["painting", "Painting"], ["featured", "Main work"], ["pedestal", "3D work"], ["stairs", "Stairs"],
 	["esc_up", "Escalator up"], ["esc_down", "Escalator down"], ["elevator", "Elevator"], ["map", "Floor map"],
+	["submit", "Submit art"],
 ]
 
 var _t := 0.0
@@ -48,18 +50,22 @@ func _draw() -> void:
 	draw_string(font, Vector2(240, 48), "OmniGallery", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, SUB)
 	if building == null:
 		return
-	var pw := (size.x - 90.0) / 2.0
+	# 横長: 1F | 2F を左右に並べる / 縦長 (縦画面のモーダル): 1F の下に 2F
+	var stacked := size.y > size.x
+	var pw := (size.x - 60.0) if stacked else (size.x - 90.0) / 2.0
 	var ph := pw * (Building.Z_MAX - Building.Z_MIN) / (Building.X_MAX - Building.X_MIN)
 	var player_floor := Building.floor_of(player.global_position.y) if player else -1
 	for f in Building.FLOORS:
-		var panel := Rect2(30.0 + f * (pw + 30.0), 100.0, pw, ph)
+		var panel := Rect2(30.0, 100.0 + f * (ph + 56.0), pw, ph) if stacked \
+			else Rect2(30.0 + f * (pw + 30.0), 100.0, pw, ph)
 		var title: String = building.floor_titles[f]
 		draw_string(title_font, panel.position + Vector2(0, -12), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 20,
 			GOLD if f == player_floor else TEXT)
 		_draw_floor(f, panel, font)
 		if f == player_floor and not Outdoor.is_outdoor(player.global_position):
 			_draw_player(panel, font)
-	_draw_legend(font, Vector2(30, 100 + ph + 40))
+	var bottom := 100.0 + ph * (Building.FLOORS if stacked else 1) + (56.0 * (Building.FLOORS - 1) if stacked else 0.0)
+	_draw_legend(font, Vector2(30, bottom + 40))
 
 
 func _to_map(panel: Rect2, x: float, z: float) -> Vector2:
@@ -81,7 +87,7 @@ func _draw_floor(f: int, panel: Rect2, font: Font) -> void:
 	draw_rect(_rect_to_map(panel, gallery), Color("4a3a2c"))
 	draw_rect(_rect_to_map(panel, atrium), Color("4f4b44"))
 	var order := ["void", "stairs", "esc_up", "esc_down", "elevator", "bench", "wall", "entrance", "painting",
-		"featured", "pedestal", "map", "terminal"]
+		"featured", "pedestal", "map", "terminal", "submit"]
 	for kind in order:
 		for item in building.map_items:
 			if item["floor"] != f or item["kind"] != kind:
@@ -131,10 +137,17 @@ func _draw_player(panel: Rect2, font: Font) -> void:
 
 func _draw_legend(font: Font, origin: Vector2) -> void:
 	var x := origin.x
-	for entry in LEGEND:
-		var c: Color = STYLE[entry[0]]
-		draw_rect(Rect2(x, origin.y - 12, 14, 14), c)
-		draw_string(font, Vector2(x + 20, origin.y), entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, TEXT)
-		x += 26 + font.get_string_size(entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 22
-	draw_circle(Vector2(x + 6, origin.y - 5), 6.0, Color("ff4d4d"))
-	draw_string(font, Vector2(x + 20, origin.y), "You", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, TEXT)
+	var y := origin.y
+	var entries: Array = LEGEND.duplicate()
+	entries.append(["", "You"])
+	for entry in entries:
+		var w := 20.0 + font.get_string_size(entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+		if x + w > size.x - 30.0 and x > origin.x:  # 幅が足りなければ折り返す
+			x = origin.x
+			y += 26.0
+		if entry[0] == "":
+			draw_circle(Vector2(x + 6, y - 5), 6.0, Color("ff4d4d"))
+		else:
+			draw_rect(Rect2(x, y - 12, 14, 14), STYLE[entry[0]])
+		draw_string(font, Vector2(x + 20, y), entry[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, TEXT)
+		x += w + 28.0

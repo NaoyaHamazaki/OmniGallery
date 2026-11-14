@@ -7,7 +7,8 @@ signal floor_changed(floor_index: int)
 signal transit_started(dest_floor: int)
 
 const HEAD_Y := 1.55
-const FOV_DEFAULT := 75.0
+const FOV_DEFAULT := 75.0  # 横画面: 縦方向の視野角
+const FOV_PORTRAIT := 64.0  # 縦画面: 横方向の視野角 (縦長の画面でも左右が狭くなりすぎないよう幅基準にする)
 const FOV_MIN := 22.0
 const STEP_DISTANCE := 1.15  # 歩幅 (ゲーム内の歩く速さ 3.5m/s で 1 秒に約 3 歩)
 const JUMP_VELOCITY := 4.2  # 約 0.9m の高さまで跳べる
@@ -33,6 +34,8 @@ var floor_gate: Callable
 
 var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 var _fov_target := FOV_DEFAULT
+var _fov_base := FOV_DEFAULT  # ズームしていないときの視野角 (画面の向きで変わる)
+var _portrait := false
 var _step_accum := 0.0
 var _bob_t := 0.0
 
@@ -93,10 +96,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_fov_target = maxf(FOV_MIN, _fov_target - 6.0)
 			return
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			_fov_target = minf(FOV_DEFAULT, _fov_target + 6.0)
+			_fov_target = minf(_fov_base, _fov_target + 6.0)
 			return
 		if event.button_index == MOUSE_BUTTON_MIDDLE:
-			_fov_target = FOV_DEFAULT
+			_fov_target = _fov_base
 			return
 		if event.button_index != MOUSE_BUTTON_LEFT:
 			return
@@ -122,7 +125,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _rotate_view(amount: Vector2) -> void:
 	if _modal_open() or driving:
 		return
-	amount *= camera.fov / FOV_DEFAULT  # ズーム中は感度を下げる
+	amount *= camera.fov / _fov_base  # ズーム中は感度を下げる
 	rotate_y(-amount.x)
 	head.rotate_x(-amount.y)
 	head.rotation.x = clamp(head.rotation.x, deg_to_rad(-85.0), deg_to_rad(85.0))
@@ -134,7 +137,22 @@ func _on_tap(pos: Vector2) -> void:
 
 
 func _process(delta: float) -> void:
+	_update_orientation()
 	camera.fov = lerpf(camera.fov, _fov_target, clampf(delta * 10.0, 0.0, 1.0))
+
+
+## 縦画面では視野角を幅基準 (KEEP_WIDTH) にする。横画面は従来どおり高さ基準
+func _update_orientation() -> void:
+	var vp := get_viewport().get_visible_rect().size
+	var portrait := vp.y > vp.x
+	if portrait == _portrait:
+		return
+	_portrait = portrait
+	var zoom := _fov_target / _fov_base
+	_fov_base = FOV_PORTRAIT if portrait else FOV_DEFAULT
+	_fov_target = _fov_base * zoom
+	camera.fov = _fov_target
+	camera.keep_aspect = Camera3D.KEEP_WIDTH if portrait else Camera3D.KEEP_HEIGHT
 
 
 func _physics_process(delta: float) -> void:

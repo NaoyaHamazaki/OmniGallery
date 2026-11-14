@@ -1,9 +1,9 @@
 class_name TouchControls
 extends Control
 ## スマホ用タッチ操作。
-##   画面左半分: バーチャルスティック (触れた位置がスティックの中心になる)
-##   画面右半分: ドラッグで視点移動
-## Web 版では最初のタップで 全画面化 + 横画面ロック を要求し、縦持ちのときは「横にしてください」を表示する。
+##   横画面: 左半分 = バーチャルスティック (触れた位置がスティックの中心になる) / 右半分 = ドラッグで視点移動
+##   縦画面: 左下 (下 45% の左半分) = スティック / それ以外 = ドラッグで視点移動
+## 縦横どちらでも遊べる (全画面化は web_shell.html が最初のタップで行う)。
 
 signal look(relative: Vector2)
 ## 指をほぼ動かさずに素早く離した (= タップ)。作品などのクリック操作として使う
@@ -44,8 +44,6 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	resized.connect(_reset_stick)
 	_set_active(DisplayServer.is_touchscreen_available())
-	if OS.has_feature("web"):
-		_install_web_mobile_helpers()
 
 
 func _set_active(active: bool) -> void:
@@ -102,6 +100,12 @@ func _input(event: InputEvent) -> void:
 				look.emit(delta * look_sensitivity)
 
 
+func _in_stick_zone(pos: Vector2) -> bool:
+	if size.y > size.x:  # 縦画面
+		return pos.x < size.x * 0.5 and pos.y > size.y * 0.55
+	return pos.x < size.x * 0.5
+
+
 func _reset_stick() -> void:
 	if _stick_index != -1:
 		return
@@ -115,31 +119,3 @@ func _draw() -> void:
 	draw_circle(_stick_center, stick_radius, Color(1, 1, 1, 0.12))
 	draw_arc(_stick_center, stick_radius, 0.0, TAU, 48, Color(1, 1, 1, 0.45), 3.0)
 	draw_circle(_knob_pos, knob_radius, Color(1, 1, 1, 0.5))
-
-
-## ブラウザ側の処理を JS で差し込む。
-## 全画面化・画面向きロックは「ユーザー操作のイベントハンドラ内」でしか許可されないため、
-## Godot 経由ではなくネイティブの touchend リスナーで実行する。
-func _install_web_mobile_helpers() -> void:
-	JavaScriptBridge.eval("""
-	(function () {
-		if (window.__omniMobileInstalled) return;
-		window.__omniMobileInstalled = true;
-		var isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-		if (!isTouch) return;
-
-		// 縦持ち時のオーバーレイ (iPhone Safari は向きロック・全画面 API 非対応のため、案内で対応)
-		var style = document.createElement('style');
-		style.textContent =
-			'#omni-rotate{display:none;position:fixed;inset:0;z-index:9999;background:#111;color:#fff;' +
-			'font:600 20px/1.6 sans-serif;align-items:center;justify-content:center;text-align:center;padding:24px}' +
-			'@media (orientation: portrait){#omni-rotate{display:flex}}';
-		document.head.appendChild(style);
-		var overlay = document.createElement('div');
-		overlay.id = 'omni-rotate';
-		overlay.innerHTML = '&#x1F4F1;&#x21BB;<br>画面を横向きにしてください';
-		document.body.appendChild(overlay);
-		// 全画面化・横画面固定は web_shell.html が最初のタップで行う (ここで毎回要求すると、
-		// FULLSCREEN ボタンで全画面を解除しても次のタップで戻ってしまうため)
-	})();
-	""", true)

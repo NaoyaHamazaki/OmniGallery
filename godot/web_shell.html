@@ -98,22 +98,17 @@ const engine = new Engine(GODOT_CONFIG);
 	}
 
 	// デフォルトでフルスクリーン: ブラウザはユーザー操作なしに全画面にできないので、最初のクリック/タップ/キー入力で切り替える。
-	// スマホは横画面に固定 (Android Chrome。iPhone Safari は全画面 API 非対応)
+	// 画面の向きは固定しない (スマホは縦画面が基本、横に回しても遊べる)。iPhone Safari は全画面 API 非対応
 	let fsTried = false;
 	function goFullscreen() {
 		if (fsTried) return;
 		fsTried = true;
 		const el = document.documentElement;
 		const req = el.requestFullscreen || el.webkitRequestFullscreen;
-		const lock = function () {
-			if (('ontouchstart' in window) && screen.orientation && screen.orientation.lock) {
-				screen.orientation.lock('landscape').catch(function () {});
-			}
-		};
-		if (!req || document.fullscreenElement) { lock(); return; }
+		if (!req || document.fullscreenElement) return;
 		try {
 			const p = req.call(el, { navigationUI: 'hide' });
-			if (p && p.then) { p.then(lock).catch(function () {}); } else { lock(); }
+			if (p && p.catch) { p.catch(function () {}); }
 		} catch (e) { /* 失敗しても続行 */ }
 	}
 	['pointerup', 'touchend', 'keydown'].forEach(function (t) { window.addEventListener(t, goFullscreen, true); });
