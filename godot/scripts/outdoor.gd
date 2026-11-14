@@ -21,6 +21,7 @@ const SPAWN := Vector3(-3.0, -1.2, 40.0)
 ## 突っ込むとタイムアタックのコースへ移動する (見た目は他の生け垣と同じで何も表示しない)
 const GATE_X := 22.0
 const GATE_W := 8.0
+const HEDGE_T := 1.2  # 外周の生け垣の厚み
 const DOOR_X := -3.0
 const DOOR_W := 2.8
 const DOOR_H := 3.2
@@ -84,7 +85,7 @@ func _update_gate(_delta: float) -> void:
 		return
 	# 運転中に隠し入口の生け垣へ突っ込んだらコースへ
 	var p := taxi.global_position
-	if p.z > LOT_Z - 2.2 and absf(p.x - GATE_X) < GATE_W / 2.0:
+	if p.z > LOT_Z - HEDGE_T - 1.6 and absf(p.x - GATE_X) < GATE_W / 2.0:
 		ta.enter()
 
 
@@ -478,22 +479,23 @@ func _build_entrance() -> void:
 
 func _build_boundaries() -> void:
 	var h := 4.0
-	_wall(Vector3(X0, 0, (FACADE_Z + LOT_Z) / 2.0), Vector3(0.5, h * 2, LOT_Z - FACADE_Z))
-	_wall(Vector3(X1, 0, (FACADE_Z + LOT_Z) / 2.0), Vector3(0.5, h * 2, LOT_Z - FACADE_Z))
+	# 見えない壁は外周の生け垣 (幅 HEDGE_T) とぴったり重ねる (ずれているとタクシーが生け垣にめり込んで見える)
+	_wall(Vector3(X0 + HEDGE_T / 2.0, 0, (FACADE_Z + LOT_Z) / 2.0), Vector3(HEDGE_T, h * 2, LOT_Z - FACADE_Z))
+	_wall(Vector3(X1 - HEDGE_T / 2.0, 0, (FACADE_Z + LOT_Z) / 2.0), Vector3(HEDGE_T, h * 2, LOT_Z - FACADE_Z))
 	# 南端 (ゲートの部分だけ空ける)
 	var g0 := GATE_X - GATE_W / 2.0
 	var g1 := GATE_X + GATE_W / 2.0
-	_wall(Vector3((X0 + g0) / 2.0, 0, LOT_Z), Vector3(g0 - X0, h * 2, 0.5))
-	_wall(Vector3((g1 + X1) / 2.0, 0, LOT_Z), Vector3(X1 - g1, h * 2, 0.5))
+	_wall(Vector3((X0 + g0) / 2.0, 0, LOT_Z - HEDGE_T / 2.0), Vector3(g0 - X0, h * 2, HEDGE_T))
+	_wall(Vector3((g1 + X1) / 2.0, 0, LOT_Z - HEDGE_T / 2.0), Vector3(X1 - g1, h * 2, HEDGE_T))
 	_build_gate(g0, g1)
 	# 建物の脇は生け垣で塞ぐ
 	for seg in [Vector2(X0, BX0), Vector2(BX1, X1)]:
 		_box(Vector3((seg.x + seg.y) / 2.0, GROUND_Y + 0.6, FACADE_Z + 0.6), Vector3(seg.y - seg.x, 1.2, 1.2), mat_green)
 		_wall(Vector3((seg.x + seg.y) / 2.0, 0, FACADE_Z + 0.6), Vector3(seg.y - seg.x, h * 2, 1.2))
 	# 外周の生け垣 (見た目)
-	_box(Vector3(X0 + 0.6, GROUND_Y + 0.6, (FACADE_Z + LOT_Z) / 2.0), Vector3(1.2, 1.2, LOT_Z - FACADE_Z), mat_green, false)
-	_box(Vector3(X1 - 0.6, GROUND_Y + 0.6, (FACADE_Z + LOT_Z) / 2.0), Vector3(1.2, 1.2, LOT_Z - FACADE_Z), mat_green, false)
-	_box(Vector3((X0 + X1) / 2.0, GROUND_Y + 0.6, LOT_Z - 0.6), Vector3(X1 - X0, 1.2, 1.2), mat_green, false)
+	_box(Vector3(X0 + HEDGE_T / 2.0, GROUND_Y + 0.6, (FACADE_Z + LOT_Z) / 2.0), Vector3(HEDGE_T, 1.2, LOT_Z - FACADE_Z), mat_green, false)
+	_box(Vector3(X1 - HEDGE_T / 2.0, GROUND_Y + 0.6, (FACADE_Z + LOT_Z) / 2.0), Vector3(HEDGE_T, 1.2, LOT_Z - FACADE_Z), mat_green, false)
+	_box(Vector3((X0 + X1) / 2.0, GROUND_Y + 0.6, LOT_Z - HEDGE_T / 2.0), Vector3(X1 - X0, 1.2, HEDGE_T), mat_green, false)
 
 
 ## 隠し入口の当たり判定: 歩いている人は通れないが、タクシーだけは衝突しない (すり抜ける)
@@ -501,10 +503,10 @@ func _build_gate(_g0: float, _g1: float) -> void:
 	_gate_body = StaticBody3D.new()
 	var cs := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(GATE_W, 8.0, 0.5)
+	shape.size = Vector3(GATE_W, 8.0, HEDGE_T)
 	cs.shape = shape
 	_gate_body.add_child(cs)
-	_gate_body.position = Vector3(GATE_X, 0, LOT_Z)
+	_gate_body.position = Vector3(GATE_X, 0, LOT_Z - HEDGE_T / 2.0)
 	add_child(_gate_body)
 	var taxi: Taxi = get_node_or_null("Taxi")
 	if taxi and TimeAttack.ENABLED:  # 閉鎖中はタクシーもすり抜けられない

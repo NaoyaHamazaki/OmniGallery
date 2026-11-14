@@ -68,6 +68,19 @@ func run_selftest(gm: Node) -> void:
 	Input.action_release("move_forward")
 	await _wait(1.5)
 	results.append(["taxi blocked before grand steps", taxi.global_position.z > Outdoor.STEPS_Z, taxi.global_position])
+	# 外周の生け垣にめり込まない (南と西)。正面から突っ込むので車体の半分の長さ 2.2 - 余裕 0.15
+	taxi.teleport(Vector3(5.0, Outdoor.GROUND_Y + 0.05, Outdoor.LOT_Z - 8.0), PI)
+	Input.action_press("move_forward")
+	await _wait(3.0)
+	Input.action_release("move_forward")
+	await _wait(1.0)
+	results.append(["taxi stops at south hedge", taxi.global_position.z < Outdoor.LOT_Z - Outdoor.HEDGE_T - 2.2 + 0.15, taxi.global_position])
+	taxi.teleport(Vector3(Outdoor.X0 + 8.0, Outdoor.GROUND_Y + 0.05, 40.0), PI / 2.0)  # 西を向く
+	Input.action_press("move_forward")
+	await _wait(3.0)
+	Input.action_release("move_forward")
+	await _wait(1.0)
+	results.append(["taxi stops at west hedge", taxi.global_position.x > Outdoor.X0 + Outdoor.HEDGE_T + 2.2 - 0.15, taxi.global_position])
 	taxi.leave()
 	await _wait(0.3)
 	results.append(["get out of taxi", p.driving == null and not p.get_node("CollisionShape3D").disabled, p.global_position])
@@ -120,7 +133,7 @@ func run_selftest(gm: Node) -> void:
 
 func _selftest_course(gm: Node, taxi: Taxi, ta: TimeAttack, results: Array) -> void:
 	taxi._enter()
-	taxi.teleport(Vector3(Outdoor.GATE_X, Outdoor.GROUND_Y + 0.05, Outdoor.LOT_Z - 3.0), PI)  # 南 (ゲート) を向く
+	taxi.teleport(Vector3(Outdoor.GATE_X, Outdoor.GROUND_Y + 0.05, Outdoor.LOT_Z - 6.0), PI)  # 南 (ゲート) を向く
 	Input.action_press("move_forward")
 	var waited := 0.0
 	while not ta.active and waited < 8.0:

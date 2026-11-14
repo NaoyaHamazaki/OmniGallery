@@ -260,6 +260,9 @@ def init_db() -> None:
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     with closing(db()) as conn, conn:
         conn.executescript(SCHEMA)
+        # DB を最初に作った日時 (再デプロイ後も同じ値なら、Volume でデータが残っている証拠)
+        conn.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)")
+        conn.execute("INSERT OR IGNORE INTO meta (key, value) VALUES ('db_created_at', ?)", (now,))
         cols = [c[1] for c in conn.execute("PRAGMA table_info(artworks)")]
         if "hq_file" not in cols:  # 既存の DB に列を追加
             conn.execute("ALTER TABLE artworks ADD COLUMN hq_file TEXT")
@@ -430,6 +433,12 @@ def _dir_stats(path: Path) -> dict:
     return {"files": len(files), "size_mb": round(sum(p.stat().st_size for p in files) / 1_048_576, 2)}
 
 
+def _meta(key: str) -> str | None:
+    with closing(db()) as conn:
+        row = conn.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+    return row[0] if row else None
+
+
 @app.get("/api/debug/info")
 def debug_info() -> dict:
     """公開しても問題ない範囲の構成情報 (絶対パス・環境変数・ホスト名などは返さない)。"""
@@ -460,7 +469,8 @@ def debug_info() -> dict:
         },
         "runtime": {"python": platform.python_version(), "fastapi": fastapi.__version__,
                     "os": platform.system(), "sqlite": sqlite3.sqlite_version},
-        "database": {"engine": "SQLite", "file": DB_PATH.name,
+        "database": {"engine": "SQLite", "file": DB_PATH.name, "created_at": _meta("db_created_at"),
+                     "volume": os.getenv("RAILWAY_VOLUME_MOUNT_PATH"),  # Railway の Volume を付けると値が入る
                      "size_kb": round(DB_PATH.stat().st_size / 1024, 1) if DB_PATH.exists() else 0,
                      "tables": tables, "artworks_by_kind": by_kind, "artworks_by_floor": by_floor},
         "storage": {"artworks": _dir_stats(ARTWORK_DIR), "models": _dir_stats(MODEL_DIR), "videos": _dir_stats(VIDEO_DIR),

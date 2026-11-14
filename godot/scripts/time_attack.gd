@@ -10,8 +10,7 @@ extends Node3D
 enum State { IDLE, COUNTDOWN, RUNNING, FINISHED }
 
 ## 機能の公開スイッチ。false = 閉鎖中 (隠し入口の生け垣はタクシーでも通れず、コースにも入れない)
-## コース・ランキングのコードと API は残してあるので、true に戻せば再開できる
-const ENABLED := false
+const ENABLED := true
 const ORIGIN := Vector3(0, 0, 1000)
 const ROAD_W := 7.0
 const CP_RADIUS := 8.0
