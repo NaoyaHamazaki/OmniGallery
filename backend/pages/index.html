@@ -3,11 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>作品出品受付 | OmniGallery</title>
-<meta name="description" content="OmniGallery に あなたの作品を展示しませんか。画像・動画・3D モデルの出品受付ページです。">
-<meta name="theme-color" content="#1f2433">
-<link rel="icon" href="/favicon.ico" sizes="any">
-<link rel="apple-touch-icon" href="/static/brand/apple-touch-icon.png">
+<title>OmniGallery - Virtual Museum</title>
+<!--META-->
+<!-- 上の行はサーバーが OGP / favicon / ホーム画面用のメタタグに置き換える (backend/main.py の top_page) -->
 <style>
 @font-face { font-family: Cinzel; src: url('/static/brand/fonts/Cinzel.ttf'); font-display: swap; }
 :root {
@@ -26,7 +24,23 @@ a { color: var(--gold2); }
 .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
 .en { font-family: Cinzel, Georgia, serif; letter-spacing: .14em; }
 
-header { text-align: center; padding: 48px 0 28px; }
+.hero { text-align: center; padding: 40px 0 56px; }
+.hero .logo { width: 72px; height: 72px; }
+.hero h1 { font-family: Cinzel, Georgia, serif; font-weight: 400; letter-spacing: .2em; font-size: clamp(30px, 8vw, 56px);
+  margin: 12px 0 0; line-height: 1.2; }
+.hero .sub { font-family: Cinzel, Georgia, serif; letter-spacing: .3em; font-size: 13px; color: var(--gold); margin-top: 6px; }
+.hero .ja { font-size: 16px; color: #d6d0c4; margin-top: 14px; letter-spacing: .12em; }
+.hero .visual { display: block; width: 100%; max-width: 760px; margin: 28px auto 0; border-radius: 12px;
+  border: 1px solid var(--line); box-shadow: 0 18px 50px rgba(0,0,0,.45); aspect-ratio: 1200 / 455; object-fit: cover; object-position: top; }
+.enter { display: inline-block; margin-top: 32px; padding: 16px 44px; border-radius: 10px; text-decoration: none;
+  background: linear-gradient(180deg, #e2c48a, var(--gold)); color: var(--bg); font-family: Cinzel, Georgia, serif;
+  font-size: 20px; letter-spacing: .18em; box-shadow: 0 0 0 1px rgba(255,226,160,.4), 0 10px 30px rgba(201,164,92,.25);
+  transition: transform .15s ease, box-shadow .15s ease; }
+.enter:hover, .enter:focus-visible { transform: translateY(-2px); box-shadow: 0 0 0 1px rgba(255,226,160,.6), 0 14px 36px rgba(201,164,92,.4); }
+.enter small { display: block; font-family: var(--serif); font-size: 12px; letter-spacing: .1em; margin-top: 2px; opacity: .8; }
+.tips { margin: 18px auto 0; font-size: 13px; color: var(--muted); line-height: 1.9; }
+.divider { border: 0; height: 1px; margin: 0 0 48px; background: linear-gradient(90deg, transparent, var(--line), transparent); }
+header { text-align: center; padding: 0 0 28px; }
 header img { width: 64px; height: 64px; }
 header .brand { font-size: 13px; color: var(--muted); margin-top: 6px; }
 header h1 { font-family: Cinzel, Georgia, serif; font-weight: 400; letter-spacing: .16em;
@@ -87,10 +101,22 @@ footer .back { display: inline-block; margin-bottom: 14px; }
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <img src="/static/brand/icon-512.png" alt="">
-    <div class="brand en">OMNIGALLERY</div>
-    <h1>SUBMIT YOUR ART</h1>
+  <section class="hero" aria-labelledby="title">
+    <img class="logo" src="/static/brand/icon-512.png" alt="">
+    <h1 id="title">OMNIGALLERY</h1>
+    <div class="sub">VIRTUAL MUSEUM</div>
+    <div class="ja">ブラウザで歩ける、バーチャル美術館</div>
+    <img class="visual" src="/static/brand/og-image.png" alt="館内に飾られた名画 (真珠の耳飾りの少女・星月夜・神奈川沖浪裏)">
+    <a class="enter" href="/game/" id="enter">ENTER THE MUSEUM<small>美術館に入る</small></a>
+    <p class="tips">インストール不要・無料。音が出ます。<br>
+      PC: マウスで見回し、WASD で移動<br>
+      スマホ: 左下のスティックで移動、画面をなぞって見回し</p>
+  </section>
+
+  <hr class="divider">
+
+  <header id="submit">
+    <h2 class="en" style="justify-content:center;font-family:Cinzel,Georgia,serif;font-size:clamp(24px,6vw,34px);letter-spacing:.16em;margin:0">SUBMIT YOUR ART</h2>
     <div class="ja">作品出品受付</div>
     <p class="lead">あなたの作品を、照明と空間のある美術館に展示しませんか。<br>
       画像・動画・3D モデルを受け付けています。審査のあと、館内の展示室に飾られます。</p>
@@ -171,8 +197,8 @@ footer .back { display: inline-block; margin-bottom: 14px; }
   </section>
 
   <footer>
-    <a class="back en" href="/game/">BACK TO THE MUSEUM</a>
-    <div>美術館から開いた場合は、元のタブに戻ると続きから鑑賞できます。</div>
+    <a class="back en" href="#title">ENTER THE MUSEUM</a>
+    <div>館内の受付端末から開いた場合は、元のタブに戻ると続きから鑑賞できます。</div>
     <div class="en" style="margin-top:10px;font-size:11px">© OMNIGALLERY</div>
   </footer>
 </div>

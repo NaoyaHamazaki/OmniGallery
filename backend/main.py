@@ -8,8 +8,10 @@
     GET  /api/artworks       作品一覧 (絵画 + 3Dモデル)
     GET  /api/debug/info     構成情報 (OMNI_DEBUG=1 のときのみ)
     GET  /static/...         作品画像 / glb モデル / 内装テクスチャ / アイコン・OGP画像
-    GET  /submit/            作品出品受付のトップページ (pages/submit.html。館内の受付端末から別タブで開く)
-    GET  /game/              Godot の Web エクスポート (../godot/build/web) を配信 (OGP メタタグを注入)
+    GET  /                   トップページ (pages/index.html): 「美術館に入る」ボタン + 作品出品受付の案内
+    GET  /submit/            トップページの出品受付の欄へ移動 (館内の受付端末から別タブで開く)
+    GET  /game/              Godot の Web エクスポート (../godot/build/web) を配信 (OGP メタタグを注入)。
+                             トップページを経由していないアクセスはトップページへ戻す
 
 素材は初回起動時に自動ダウンロードする (すべて CC0 / CC BY / パブリックドメイン)。
 """
@@ -488,7 +490,7 @@ def _meta_tags(base: str) -> str:
         "og:site_name": APP_NAME,
         "og:title": f"{APP_NAME} - Virtual Museum",
         "og:description": OG_DESCRIPTION,
-        "og:url": f"{base}game/",
+        "og:url": base,
         "og:image": f"{base}static/brand/og-image.png",
         "og:image:width": "1200",
         "og:image:height": "630",
@@ -510,21 +512,31 @@ def _meta_tags(base: str) -> str:
     return "\n".join(lines)
 
 
+# トップページを開いたら発行する入館の印 (ブラウザを閉じるまで有効)。/game/ はこれがないとトップページへ戻す
+ENTRY_COOKIE = "omni_entry"
+
+
 @app.get("/", include_in_schema=False)
-def root():
-    if (WEB_BUILD_DIR / "index.html").exists():
-        return RedirectResponse(url="/game/")
-    return HTMLResponse(
-        """<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-        <title>OmniGallery</title><link rel="icon" href="/favicon.ico">
-        <body style="font-family:sans-serif;max-width:640px;margin:40px auto;padding:0 16px;line-height:1.7">
-        <h1>OmniGallery: サーバーは起動しています</h1>
-        <p>Godot の Web エクスポートがまだありません (<code>godot/build/web/index.html</code>)。</p>
-        <p>Godot で「プロジェクト → エクスポート → Web → プロジェクトのエクスポート」を実行したら、
-        このページを再読み込みしてください (サーバーの再起動は不要)。</p>
-        <p>API の確認: <a href="/api/artworks">/api/artworks</a> ・ <a href="/docs">/docs</a></p>
-        </body>"""
-    )
+def top_page(request: Request):
+    """トップページ。ここの「美術館に入る」ボタンからゲームを起動する。"""
+    if not (WEB_BUILD_DIR / "index.html").exists():
+        return HTMLResponse(
+            """<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+            <title>OmniGallery</title><link rel="icon" href="/favicon.ico">
+            <body style="font-family:sans-serif;max-width:640px;margin:40px auto;padding:0 16px;line-height:1.7">
+            <h1>OmniGallery: サーバーは起動しています</h1>
+            <p>Godot の Web エクスポートがまだありません (<code>godot/build/web/index.html</code>)。</p>
+            <p>Godot で「プロジェクト → エクスポート → Web → プロジェクトのエクスポート」を実行したら、
+            このページを再読み込みしてください (サーバーの再起動は不要)。</p>
+            <p>API の確認: <a href="/api/artworks">/api/artworks</a> ・ <a href="/docs">/docs</a></p>
+            </body>"""
+        )
+    html = (PAGES_DIR / "index.html").read_text(encoding="utf-8")
+    html = html.replace("<!--META-->", _meta_tags(str(request.base_url)), 1)
+    res = HTMLResponse(html, headers={"Cache-Control": "no-cache"})
+    res.set_cookie(ENTRY_COOKIE, "1", path="/", samesite="lax", httponly=True,
+                   secure=request.url.scheme == "https")
+    return res
 
 
 @app.get("/game/", include_in_schema=False)
@@ -532,8 +544,8 @@ def root():
 def game_index(request: Request):
     """Godot が出力した index.html に OGP / favicon のメタタグを差し込んで返す。"""
     index = WEB_BUILD_DIR / "index.html"
-    if not index.exists():
-        return RedirectResponse(url="/")
+    if not index.exists() or request.cookies.get(ENTRY_COOKIE) != "1":
+        return RedirectResponse(url="/")  # トップページを経由してから入館する
     html = index.read_text(encoding="utf-8")
     html = html.replace("<head>", "<head>\n" + _meta_tags(str(request.base_url)), 1)
     return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
@@ -608,19 +620,15 @@ def bye():
         <img src="/static/brand/icon-512.png" alt="">
         <h1>THANK YOU FOR VISITING</h1>
         <p>ご来館ありがとうございました</p>
-        <a href="/game/">ENTER AGAIN</a>"""
+        <a href="/">ENTER AGAIN</a>"""
     )
 
 
 @app.get("/submit", include_in_schema=False)
-def submit_redirect():
-    return RedirectResponse(url="/submit/")
-
-
 @app.get("/submit/", include_in_schema=False)
-def submit_top():
-    """作品出品受付のトップページ (UGC。現在は案内のみで、アップロードは準備中)。"""
-    return HTMLResponse((PAGES_DIR / "submit.html").read_text(encoding="utf-8"), headers={"Cache-Control": "no-cache"})
+def submit_redirect():
+    """作品出品受付 = トップページの出品受付の欄 (館内の受付端末のリンク先。現在は案内のみ)。"""
+    return RedirectResponse(url="/#submit")
 
 
 @app.get("/favicon.ico", include_in_schema=False)

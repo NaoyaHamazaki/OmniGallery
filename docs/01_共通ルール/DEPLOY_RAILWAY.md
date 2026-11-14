@@ -7,7 +7,8 @@ GitHub リポジトリ ──(push で自動デプロイ)──▶ Railway サ�
                                               └ FastAPI (uvicorn)
                                                  ├ /api/...        作品 API
                                                  ├ /static/...     画像・glb・テクスチャ
-                                                 └ /game/          Godot の Web ビルド (gzip 配信)
+                                                 ├ /               トップページ (美術館に入るボタン + 出品受付の案内)
+                                                 └ /game/          Godot の Web ビルド (gzip 配信。トップページを経由していなければ / へ戻す)
 ```
 
 FastAPI がゲーム本体も配信するので、ゲームと API が **同一オリジン** になり CORS で詰まりません。
@@ -104,7 +105,7 @@ push すると Railway が自動で再デプロイします (下記 3-2 の設�
 ### 3-4. 動作確認
 
 1. Deployments タブでビルドログ → `Application startup complete` が出ていれば起動成功
-2. 発行されたドメインを開く: `https://xxxx.up.railway.app/` → `/game/` に移動してロード画面 → 駐車場から開始
+2. 発行されたドメインを開く: `https://xxxx.up.railway.app/` → トップページの「ENTER THE MUSEUM」→ `/game/` でロード画面 → 駐車場から開始
 3. `https://xxxx.up.railway.app/api/artworks` の `url` が `https://` で始まっていること (http だと Mixed Content で画像が出ない)
 4. SNS のシェア確認: X (Twitter) の投稿画面に URL を貼る / https://www.opengraph.xyz/ などで OGP 画像が出るか
 

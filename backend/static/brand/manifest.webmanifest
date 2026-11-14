@@ -1,7 +1,7 @@
 {
   "name": "OmniGallery - Virtual Museum",
   "short_name": "OmniGallery",
-  "start_url": "/game/",
+  "start_url": "/",
   "scope": "/",
   "display": "fullscreen",
   "orientation": "any",
